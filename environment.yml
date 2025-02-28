@@ -1,4 +1,4 @@
-name: base
+name: zioboia
 channels:
   - pytorch
   - conda-forge
@@ -10,21 +10,19 @@ dependencies:
   - torchaudio
   - pip=23.1.1
   - pip:
-    - configargparse
-    - ipykernel
-    - ipython
-    - ipympl
-    - pytorch_lightning
-    - matplotlib
-    - scikit-learn
-    - umap
-    - biopython
-    - pandas
-    - pytest
-    - numpy
-    - pathlib
-    - einops
-    - wandb
-    - -e .
-
-prefix: /data/users/steven/miniconda3/envs/ORDNA
+      - configargparse
+      - ipykernel
+      - ipython
+      - ipympl
+      - pytorch_lightning
+      - matplotlib
+      - scikit-learn
+      - umap
+      - biopython
+      - pandas
+      - pytest
+      - numpy
+      - pathlib
+      - einops
+      - wandb
+      - -e .

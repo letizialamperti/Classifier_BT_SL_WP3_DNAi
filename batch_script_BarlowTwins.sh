@@ -20,13 +20,13 @@ source activate diaus_1
 
 
 # Define dataset and labels path
-DATASET_DIR="/store/sdsc/sd29/letizia/sud_corse"
+DATASET_DIR="/bettik/PROJECTS/pr-qiepb/lampertl"
 LABELS_FILE="label/ordinal_label_Sud_Corse.csv"
 
 
 # Command to run the Python script
 echo "Starting the training process."
-srun -ul $HOME/miniconda3/envs/diaus_1/bin/python training_BarlowTwins.py \
+srun -ul $HOME/home/lampertl/.conda/envs/zioboia/bin/python training_BarlowTwins.py \
     --arg_log True \
     --samples_dir $DATASET_DIR \
     --labels_file $LABELS_FILE \

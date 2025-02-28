@@ -8,8 +8,6 @@ set -e  # Ferma il job in caso di errore
 #OAR --stderr barlow-twins-errorfile.err
 #OAR --project pr-qiepb
 
-# Spostarsi nella cartella di lavoro
-cd /bettik/PROJECTS/pr-qiepb/lampertl
 
 # Attivare Conda
 source /applis/environments/conda.sh

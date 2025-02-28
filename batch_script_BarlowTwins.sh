@@ -1,32 +1,24 @@
-#!/bin/bash -l
+#!/bin/bash
 
-# SLURM SBATCH Directives
-#SBATCH --job-name=barlow-twins-job
-#SBATCH --time=24:00:00
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=12
-#SBATCH --constraint=gpu
-#SBATCH --output=barlow-twins-logfile-%j.log
-#SBATCH --error=barlow-twins-errorfile-%j.err
-#SBATCH --account=sd29
+# OAR Directives
+#OAR -n barlow-twins-job                   # Nome del job
+#OAR -l /nodes=1/core=12,walltime=24:00:00 # 1 nodo, 12 core, 24 ore di tempo massimo
+#OAR -l "hasgpu='YES'"/cpu=1               # Richiede una GPU
+#OAR --project pr-qiepb                    # Progetto (se necessario)
+#OAR -O barlow-twins-logfile-%jobid%.log   # Log output
+#OAR -E barlow-twins-errorfile-%jobid%.err # Log errori
 
-# Module loading section
-module load daint-gpu
-module load cray-python
+# Attivare Conda
+source /applis/environments/conda.sh
+conda activate zioboia
 
-# Activate conda environment
-source activate diaus_1
-
-
-# Define dataset and labels path
+# Definire percorsi dataset e labels
 DATASET_DIR="/bettik/PROJECTS/pr-qiepb/lampertl"
-LABELS_FILE="label/ordinal_label_Sud_Corse.csv"
+LABELS_FILE="label/labels_5_levels.csv"
 
-
-# Command to run the Python script
+# Eseguire lo script Python
 echo "Starting the training process."
-srun -ul $HOME/home/lampertl/.conda/envs/zioboia/bin/python training_BarlowTwins.py \
+python training_BarlowTwins.py \
     --arg_log True \
     --samples_dir $DATASET_DIR \
     --labels_file $LABELS_FILE \

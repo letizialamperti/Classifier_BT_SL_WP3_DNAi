@@ -1,12 +1,18 @@
 #!/bin/bash
 
-# OAR Directives
-#OAR -n barlow-twins-job                   # Nome del job
-#OAR -l /nodes=1/core=12,walltime=24:00:00 # 1 nodo, 12 core, 24 ore di tempo massimo
-#OAR -l "hasgpu='YES'"/cpu=1               # Richiede una GPU
-#OAR --project pr-qiepb                    # Progetto (se necessario)
-#OAR -O barlow-twins-logfile-%jobid%.log   # Log output
-#OAR -E barlow-twins-errorfile-%jobid%.err # Log errori
+#OAR -n barlow-twins-job
+
+#OAR -l /nodes=1/core=12,walltime=24:00:00
+
+#OAR -p gpu_count>0
+
+#OAR --stdout barlow-twins-logfile.out
+#OAR --stderr barlow-twins-errorfile.err
+
+#OAR --project pr-qiepb
+
+
+cd /bettik/PROJECTS/pr-qiepb/lampertl
 
 # Attivare Conda
 source /applis/environments/conda.sh

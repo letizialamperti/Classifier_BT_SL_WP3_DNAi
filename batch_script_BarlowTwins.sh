@@ -1,12 +1,13 @@
 #!/bin/bash
+set -e  # Ferma il job in caso di errore
 
 #OAR -n barlow-twins-job
-#OAR -l /nodes=1/core=12,walltime=24:00:00
-#OAR -p gpu_count>0
+#OAR -l "hasgpu='YES'"/cpu=1/nodes=1/core=12,walltime=24:00:00
 #OAR --stdout barlow-twins-logfile.out
 #OAR --stderr barlow-twins-errorfile.err
 #OAR --project pr-qiepb
 
+# Spostarsi nella cartella di lavoro
 cd /bettik/PROJECTS/pr-qiepb/lampertl
 
 # Attivare Conda

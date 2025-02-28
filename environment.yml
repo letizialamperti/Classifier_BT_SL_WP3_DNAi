@@ -25,3 +25,5 @@ dependencies:
       - pathlib
       - einops
       - wandb
+prefix: /home/lampertl/.conda/envs/zioboia
+ 

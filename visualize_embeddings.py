@@ -9,14 +9,13 @@ from ORDNA.models.barlow_twins import SelfAttentionBarlowTwinsEmbedder
 from ORDNA.utils.sequence_mapper import SequenceMapper
 
 
-MODEL_TYPE = 'barlow_twins' # Alternativa: 'triplets'
-CHECKPOINT_PATH = Path('checkpoints/model-epoch=00-val_accuracy=1.00.ckpt')
-DATASET = 'sud_corse'
-SAMPLE_DIR = Path(f'/store/sdsc/sd29/letizia/sud_corse')
+MODEL_TYPE = 'barlow_twins' 
+CHECKPOINT_PATH = Path('checkpoints/BT_2025-epoch=00.ckpt')
+DATASET = '460_all_data'
+SAMPLE_DIR = Path(f'/bettik/PROJECTS/pr-qiepb/lampertl')
 SEQUENCE_LENGTH = 300
 SAMPLE_SUBSET_SIZE = 500
-NUM_CLASSES = 2 # Adjust this based on the number of classes in your classifier
-
+NUM_CLASSES = 2 # non serve
 
 
 if MODEL_TYPE == 'barlow_twins':
@@ -29,9 +28,9 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model.to(device)
 
 version = CHECKPOINT_PATH.parents[1].name
-output_folder = "/scratch/snx3000/llampert/plot/"
+output_folder = "/BT_output"
 os.makedirs(output_folder, exist_ok=True)
-output_csv_file = os.path.join(output_folder, f"new_embedding_coordinates_{DATASET.lower()}_{version}_binary_epochs.csv")
+output_csv_file = os.path.join(output_folder, f"embedding_coords_{DATASET.lower()}_{version}.csv")
 
 
 

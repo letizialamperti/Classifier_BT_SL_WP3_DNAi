@@ -11,7 +11,7 @@ set -e  # Termina lo script se si verifica un errore
 #OAR -p gpumodel='A100'
 #OAR --stdout classifier-logfile.out
 #OAR --stderr classifier-errorfile.err
-#OAR --project sd29
+#OAR --project pr-qiepb
 
 # ----------------------------------------
 # Caricamento dei moduli (modifica in base al tuo cluster)

@@ -9,15 +9,9 @@ class MergedDataset(Dataset):
         self.protection = pd.read_csv(protection_file)
         self.habitat = pd.read_csv(habitat_file)
 
-        print(f"DEBUG - Embeddings CSV head:\n{self.embeddings.head()}")
-        print(f"DEBUG - Protection CSV head:\n{self.protection.head()}")
-        print(f"DEBUG - Habitat CSV head:\n{self.habitat.head()}")
-
         # Merge datasets on the 'Sample' column
         self.data = pd.merge(self.embeddings, self.protection, left_on='Sample', right_on='spygen_code')
         self.data = pd.merge(self.data, self.habitat, on='spygen_code')
-
-        print(f"DEBUG - Merged data head after merging:\n{self.data.head()}")
 
         # One-hot encode habitat
         habitat_one_hot = pd.get_dummies(self.data['habitat'], prefix='', prefix_sep='')
@@ -26,18 +20,12 @@ class MergedDataset(Dataset):
         # Drop original 'habitat' column and unnecessary columns
         self.data = self.data.drop(columns=['habitat', 'spygen_code'])
 
-        print(f"DEBUG - Data head after one-hot encoding habitat:\n{self.data.head()}")
-
         # Extract embeddings
         self.embeddings = self.data.iloc[:, 1:-len(habitat_one_hot.columns)-1].values
         # Extract one-hot encoded habitat
         self.habitats = self.data.iloc[:, -len(habitat_one_hot.columns):].values
         # Extract protection labels
         self.labels = self.data['protection'].values
-
-        print(f"DEBUG - Embeddings shape: {self.embeddings.shape}")
-        print(f"DEBUG - Habitats shape: {self.habitats.shape}")
-        print(f"DEBUG - Labels shape: {self.labels.shape}")
 
     def __len__(self):
         return len(self.labels)

@@ -1,33 +1,37 @@
-#!/bin/bash -l
+#!/bin/bash
+set -e  # Termina lo script se si verifica un errore
 
-# SLURM SBATCH Directives
-#SBATCH --job-name=classifier-job
-#SBATCH --time=24:00:00
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=12
-#SBATCH --constraint=gpu
-#SBATCH --output=classifier-logfile-%j.log
-#SBATCH --error=classifier-errorfile-%j.err
-#SBATCH --account=sd29
+# ----------------------------------------
+# DIRETTIVE OAR
+# Nota: le direttive OAR devono iniziare con "#OAR"
+# Modifica i parametri in base alle risorse e alle policy del tuo cluster
+#Esempio con OAR:
+#OAR -n classifier-job
+#OAR -l /nodes=1/gpu=1/core=12,walltime=24:00:00
+#OAR -p gpumodel='A100'
+#OAR --stdout classifier-logfile.out
+#OAR --stderr classifier-errorfile.err
+#OAR --project sd29
 
-# Module loading section
+# ----------------------------------------
+# Caricamento dei moduli (modifica in base al tuo cluster)
 module load daint-gpu
 module load cray-python
 
-# Activate conda environment
-source activate diaus_1
+# Attiva l'ambiente Conda (modifica il percorso e il nome dell'ambiente se necessario)
+source /applis/environments/conda.sh
+conda activate zioboia
 
-# Define dataset and labels path
+# Definisci i percorsi per i file dei dati
 EMBEDDINGS_FILE="BT_output/train/embedding_coords_460_all_data_.csv"
 PROTECTION_FILE="label/labels_5_levels.csv"
 HABITAT_FILE="habitat/empty_label_habitat_460.csv"
 
-# Command to run the Python script
+# Avvia il training del classificatore
 echo "Starting the training process."
 export CUDA_LAUNCH_BLOCKING=1
 
-srun -ul $HOME/miniconda3/envs/diaus_1/bin/python training_Classifier.py \
+python training_Classifier.py \
     --arg_log True \
     --embeddings_file $EMBEDDINGS_FILE \
     --protection_file $PROTECTION_FILE \

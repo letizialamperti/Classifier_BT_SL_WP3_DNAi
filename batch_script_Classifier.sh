@@ -13,10 +13,6 @@ set -e  # Termina lo script se si verifica un errore
 #OAR --stderr classifier-errorfile.err
 #OAR --project pr-qiepb
 
-# ----------------------------------------
-# Caricamento dei moduli (modifica in base al tuo cluster)
-module load daint-gpu
-module load cray-python
 
 # Attiva l'ambiente Conda (modifica il percorso e il nome dell'ambiente se necessario)
 source /applis/environments/conda.sh

@@ -9,6 +9,11 @@ class MergedDataset(Dataset):
         self.protection = pd.read_csv(protection_file)
         self.habitat = pd.read_csv(habitat_file)
 
+        # Conversion to srings
+        self.embeddings['Sample'] = self.embeddings['Sample'].astype(str)
+        self.protection['spygen_code'] = self.protection['spygen_code'].astype(str)
+        self.habitat['spygen_code'] = self.habitat['spygen_code'].astype(str)
+        
         # Merge datasets on the 'Sample' column
         self.data = pd.merge(self.embeddings, self.protection, left_on='Sample', right_on='spygen_code')
         self.data = pd.merge(self.data, self.habitat, on='spygen_code')

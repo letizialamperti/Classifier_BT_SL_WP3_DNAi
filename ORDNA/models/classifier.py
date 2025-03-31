@@ -38,7 +38,7 @@ class Classifier(pl.LightningModule):
         self.num_classes = num_classes
         input_dim = sample_emb_dim + habitat_dim
 
-          self.classifier = nn.Sequential(
+        self.classifier = nn.Sequential(
             nn.Linear(input_dim, 256),
             nn.BatchNorm1d(256),
             nn.ReLU(),

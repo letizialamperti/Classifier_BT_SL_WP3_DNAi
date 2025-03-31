@@ -25,7 +25,7 @@ class OrdinalCrossEntropyLoss(nn.Module):
         epsilon = 1e-9
         prob = torch.clamp(prob, min=epsilon, max=1-epsilon)
         if self.class_weights is not None:
-            class_weights = self.class_weights[labels].view(-1, 1).to(labels.device)
+            class_weights = self.class_weights.to(labels.device)[labels].view(-1, 1)
             loss = - (one_hot_labels * torch.log(prob) + (1 - one_hot_labels) * torch.log(1 - prob)).sum(dim=1) * class_weights
         else:
             loss = - (one_hot_labels * torch.log(prob) + (1 - one_hot_labels) * torch.log(1 - prob)).sum(dim=1)

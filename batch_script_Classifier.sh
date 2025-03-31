@@ -35,6 +35,6 @@ python training_Classifier.py \
     --num_classes 5 \
     --batch_size 10 \
     --initial_learning_rate 1e-3 \
-    --max_epochs 50
+    --max_epochs 100
 
 echo "Training completed successfully."

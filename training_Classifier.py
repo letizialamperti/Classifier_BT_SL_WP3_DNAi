@@ -9,38 +9,23 @@ import wandb
 import pandas as pd
 from pathlib import Path
 
-# Funzione per calcolare i pesi delle classi
-def calculate_class_weights_from_csv(protection_file: Path, num_classes: int) -> torch.Tensor:
-    labels_df = pd.read_csv(protection_file)
-    print(f"DEBUG - protection_file content:\n{labels_df.head()}")
-    label_counts = labels_df['protection'].value_counts().sort_index()
-    class_weights = 1.0 / label_counts
-    class_weights = class_weights / class_weights.sum() * num_classes  # Normalize weights
-    return torch.tensor(class_weights.values, dtype=torch.float)
-
+# Function to calculate class weights for CORAL
 def calculate_class_weights_from_csv_coral(protection_file: Path, num_classes: int) -> torch.Tensor:
     """
-    Calcola i pesi per la CORAL loss basati sulla distribuzione delle etichette nel file CSV.
-
-    Args:
-        protection_file (Path): Il percorso al file CSV contenente le etichette.
-        num_classes (int): Il numero totale di classi ordinali.
-
-    Returns:
-        torch.Tensor: Un tensore contenente i pesi per le soglie (num_classes - 1).
+    Calculate weights for CORAL loss based on label distribution from CSV.
     """
     labels_df = pd.read_csv(protection_file)
     label_counts = labels_df['protection'].value_counts().sort_index()
 
-    # Calcolare i pesi in base alla distribuzione delle etichette
+    # Calculate class weights based on label distribution
     class_weights = 1.0 / label_counts
-    class_weights = class_weights / class_weights.sum() * num_classes  # Normalizza i pesi
+    class_weights = class_weights / class_weights.sum() * num_classes  # Normalize weights
 
-    # CORAL: utilizziamo i pesi per le soglie (num_classes - 1)
-    # Prendiamo la media dei pesi consecutivi per approssimare i pesi per le soglie
+    # CORAL: Use threshold weights (average between consecutive class weights)
     threshold_weights = [(class_weights[i] + class_weights[i + 1]) / 2 for i in range(num_classes - 1)]
     return torch.tensor(threshold_weights, dtype=torch.float)
 
+# Main function for training the classifier
 def main():
     args = get_args()
     if args.arg_log:
@@ -57,6 +42,7 @@ def main():
     print(f"DEBUG - protection_file content:\n{protection_df.head()}")
     print(f"DEBUG - habitat_file content:\n{habitat_df.head()}")
 
+    # Data module initialization
     datamodule = MergedDataModule(
         embeddings_file=args.embeddings_file,
         protection_file=args.protection_file,
@@ -67,9 +53,11 @@ def main():
 
     print(f"DEBUG - sample_emb_dim: {datamodule.sample_emb_dim}, habitat_dim: {datamodule.num_habitats}")
 
-    class_weights = calculate_class_weights_from_csv(Path(args.protection_file), args.num_classes)
-    print(f"DEBUG - class_weights: {class_weights}")
+    # Calculate class weights for CORAL
+    class_weights = calculate_class_weights_from_csv_coral(Path(args.protection_file), args.num_classes)
+    print(f"DEBUG - CORAL class weights: {class_weights}")
 
+    # Model initialization with CORAL loss
     model = Classifier(
         sample_emb_dim=datamodule.sample_emb_dim,
         num_classes=args.num_classes,
@@ -78,6 +66,7 @@ def main():
         class_weights=class_weights
     )
 
+    # Checkpoint callback to save best models
     checkpoint_callback = ModelCheckpoint(
         monitor='val_class_loss',
         dirpath='checkpoints_classifier',
@@ -86,22 +75,26 @@ def main():
         mode='min',
     )
 
+    # Early stopping callback
     early_stopping_callback = EarlyStopping(
         monitor='val_class_loss',
         patience=3,
         mode='min'
     )
 
+    # Wandb logger setup
     wandb_logger = WandbLogger(project='ORDNA_Class_july', save_dir="lightning_logs", config=args, log_model=False)
     wandb_run = wandb.init(project='ORDNA_Class_july', config=args)
     print(f"DEBUG - Wandb run URL: {wandb_run.url}")
 
+    # Trainer initialization
     trainer = pl.Trainer(
         accelerator=args.accelerator,
         max_epochs=args.max_epochs,
         logger=wandb_logger,
         callbacks=[checkpoint_callback, early_stopping_callback],
-        log_every_n_steps=10)
+        log_every_n_steps=10
+    )
 
     print("Starting training...")
     trainer.fit(model=model, datamodule=datamodule)

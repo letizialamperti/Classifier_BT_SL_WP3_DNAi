@@ -96,7 +96,7 @@ class Classifier(pl.LightningModule):
         
         
         self.class_weights = class_weights.to(self.device) if class_weights is not None else None
-        self.loss_fn = OrdinalCrossEntropyLoss(num_classes, self.class_weights)
+        self.loss_fn = CoralLoss(num_classes, self.class_weights)
         self.train_accuracy = Accuracy(task="multiclass", num_classes=num_classes).to(self.device)
         self.val_accuracy = Accuracy(task="multiclass", num_classes=num_classes).to(self.device)
         self.train_precision = Precision(task="multiclass", num_classes=num_classes).to(self.device)

@@ -30,6 +30,54 @@ class OrdinalCrossEntropyLoss(nn.Module):
         else:
             loss = - (one_hot_labels * torch.log(prob) + (1 - one_hot_labels) * torch.log(1 - prob)).sum(dim=1)
         return loss.mean()
+        
+
+class CoralLoss(nn.Module):
+    def __init__(self, num_classes, class_weights=None):
+        """
+        CORAL Loss per problemi di regressione ordinale.
+        
+        Args:
+            num_classes (int): Numero totale di classi ordinali.
+            class_weights (Tensor, optional): Pesi per ogni soglia (dovrebbe essere un tensore di forma [num_classes-1]).
+                                               Questi pesi verranno applicati per bilanciare l'importanza
+                                               delle decisioni binarie relative alle soglie.
+        """
+        super(CoralLoss, self).__init__()
+        self.num_classes = num_classes
+        self.class_weights = class_weights
+
+    def forward(self, logits, labels):
+        """
+        Calcola la CORAL loss.
+
+        Args:
+            logits: Tensor di forma [B, num_classes-1] contenente i logit per ciascuna soglia.
+            labels: Tensor di forma [B] con etichette intere (0, 1, ..., num_classes-1).
+
+        Returns:
+            loss: Valore scalare della CORAL loss.
+        """
+        B = labels.size(0)
+        # Per ogni soglia i (0,1,...,num_classes-2), il target è 1 se l'etichetta > i, altrimenti 0.
+        thresholds = torch.arange(self.num_classes - 1, device=labels.device).unsqueeze(0).expand(B, -1)
+        labels_expanded = labels.unsqueeze(1).expand_as(thresholds)
+        target = (labels_expanded > thresholds).float()  # Forma: [B, num_classes-1]
+
+        # Calcola le probabilità per ogni soglia tramite la funzione sigmoide
+        prob = torch.sigmoid(logits)
+        
+        # Calcola la Binary Cross Entropy senza riduzione, per ogni soglia
+        bce = F.binary_cross_entropy(prob, target, reduction='none')  # [B, num_classes-1]
+        
+        # Applica i pesi per classe se forniti: ci aspettiamo un tensore di forma [num_classes-1]
+        if self.class_weights is not None:
+            cw = self.class_weights.to(logits.device)  # Assicurati che i pesi siano sullo stesso device
+            bce = bce * cw.unsqueeze(0)  # Moltiplica ogni elemento per il peso corrispondente
+        # Media su tutte le soglie e sui campioni
+        loss = bce.mean()
+        return loss
+
 
 class Classifier(pl.LightningModule):
     def __init__(self, sample_emb_dim: int, num_classes: int, habitat_dim: int, initial_learning_rate: float = 1e-5, class_weights=None):

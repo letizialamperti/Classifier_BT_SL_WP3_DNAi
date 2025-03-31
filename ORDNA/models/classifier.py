@@ -38,12 +38,29 @@ class Classifier(pl.LightningModule):
         self.num_classes = num_classes
 
         self.classifier = nn.Sequential(
-            nn.Linear(sample_emb_dim + habitat_dim, 256),
+            nn.Linear(input_dim, 256),
             nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.Dropout(0.5),
-            nn.Linear(256, num_classes)
+            nn.Dropout(0.3),
+            
+            nn.Linear(256, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            
+            nn.Linear(256, 128),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            
+            nn.Linear(128, 64),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Dropout(0.3),
+            
+            nn.Linear(64, num_classes)
         )
+        
         
         self.class_weights = class_weights.to(self.device) if class_weights is not None else None
         self.loss_fn = OrdinalCrossEntropyLoss(num_classes, self.class_weights)

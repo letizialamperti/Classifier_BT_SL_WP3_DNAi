@@ -18,6 +18,29 @@ def calculate_class_weights_from_csv(protection_file: Path, num_classes: int) ->
     class_weights = class_weights / class_weights.sum() * num_classes  # Normalize weights
     return torch.tensor(class_weights.values, dtype=torch.float)
 
+def calculate_class_weights_from_csv_coral(protection_file: Path, num_classes: int) -> torch.Tensor:
+    """
+    Calcola i pesi per la CORAL loss basati sulla distribuzione delle etichette nel file CSV.
+
+    Args:
+        protection_file (Path): Il percorso al file CSV contenente le etichette.
+        num_classes (int): Il numero totale di classi ordinali.
+
+    Returns:
+        torch.Tensor: Un tensore contenente i pesi per le soglie (num_classes - 1).
+    """
+    labels_df = pd.read_csv(protection_file)
+    label_counts = labels_df['protection'].value_counts().sort_index()
+
+    # Calcolare i pesi in base alla distribuzione delle etichette
+    class_weights = 1.0 / label_counts
+    class_weights = class_weights / class_weights.sum() * num_classes  # Normalizza i pesi
+
+    # CORAL: utilizziamo i pesi per le soglie (num_classes - 1)
+    # Prendiamo la media dei pesi consecutivi per approssimare i pesi per le soglie
+    threshold_weights = [(class_weights[i] + class_weights[i + 1]) / 2 for i in range(num_classes - 1)]
+    return torch.tensor(threshold_weights, dtype=torch.float)
+
 def main():
     args = get_args()
     if args.arg_log:

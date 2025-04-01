@@ -32,7 +32,7 @@ class BinaryClassifier(pl.LightningModule):
             nn.Linear(sample_emb_dim + habitat_dim, 256),
             nn.BatchNorm1d(256),
             nn.ReLU(),
-            nn.Dropout(0.5),
+            nn.Dropout(0.3),
             nn.Linear(256, 1)  # Output layer with a single neuron for binary classification
         )
         

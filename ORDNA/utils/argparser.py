@@ -26,7 +26,8 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('--embeddings_file', required=True, type=str, help='Path to the embeddings CSV file.')
     parser.add_argument('--protection_file', required=True, type=str, help='Path to the protection labels CSV file.')
     parser.add_argument('--habitat_file', required=True, type=str, help='Path to the habitat labels CSV file.')
-
+    parser.add_argument('--k_cross_file',   required=True, type=str, help='Path to the k-fold split CSV (spygen_code + set=train/validation).')
+    
     # Model and training hyperparameters
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size for training and evaluation.')
     parser.add_argument('--num_classes', required=True, type=int, help='Number of classes for classification.')

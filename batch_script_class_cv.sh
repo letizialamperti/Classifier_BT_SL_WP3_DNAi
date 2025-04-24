@@ -29,6 +29,7 @@ export CUDA_LAUNCH_BLOCKING=1
 
 
     python train_cv.py \
+  --arg_log True \
   --embeddings_file $EMBEDDINGS_FILE \
   --protection_file $PROTECTION_FILE \
   --habitat_file $HABITAT_FILE \

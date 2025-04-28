@@ -52,5 +52,4 @@ class MergedDataset(Dataset):
         emb     = torch.tensor(self.embeddings[idx], dtype=torch.float)
         hab     = torch.tensor(self.habitats[idx],   dtype=torch.float)
         label   = torch.tensor(self.labels[idx],     dtype=torch.long)
-        code    =        self.codes[idx]
-        return emb, hab, label, code
+        return emb, hab, label

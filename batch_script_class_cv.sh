@@ -33,7 +33,7 @@ export CUDA_LAUNCH_BLOCKING=1
   --embeddings_file $EMBEDDINGS_FILE \
   --protection_file $PROTECTION_FILE \
   --habitat_file $HABITAT_FILE \
-  --k_cross_file k_cross/split_5_fold_01.csv \
+  --k_cross_file k_cross/split_5_fold_02.csv \
   --num_classes 5 \
   --batch_size 10 \
   --initial_learning_rate 1e-3 \

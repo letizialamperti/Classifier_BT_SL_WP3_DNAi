@@ -52,12 +52,9 @@ def main():
         protection_file=args.protection_file,
         habitat_file=args.habitat_file
     )
-    # Leggi split di cross-validation: codici di validazione
-    kdf = pd.read_csv(args.k_cross_file, dtype=str)
-    val_codes = kdf['spygen_code'].astype(str).tolist()
-    # Indici di train e val
-    train_indices = [i for i, code in enumerate(dataset_full.codes) if code not in val_codes]
-    val_indices   = [i for i, code in enumerate(dataset_full.codes) if code in val_codes]
+    # Calcolo delle dimensioni di input dal dataset
+    sample_emb_dim = dataset_full.embeddings.shape[1]
+    habitat_dim    = dataset_full.habitats.shape[1]
 
     # Splitting basato sulla colonna 'set' del CSV di cross-validation
     kdf = pd.read_csv(args.k_cross_file, dtype=str)
@@ -76,10 +73,10 @@ def main():
     # Crea Subset e DataLoader
     train_dataset = Subset(dataset_full, train_indices)
     val_dataset   = Subset(dataset_full, val_indices)
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    val_loader   = DataLoader(val_dataset,   batch_size=args.batch_size)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
+    val_loader   = DataLoader(val_dataset,   batch_size=args.batch_size, num_workers=4)
 
-    print(f"DEBUG - sample_emb_dim: {dataset_full.sample_emb_dim}, habitat_dim: {dataset_full.num_habitats}")
+    print(f"DEBUG - sample_emb_dim: {sample_emb_dim}, habitat_dim: {habitat_dim}")
 
     # Calcolo del pos_weight
     pos_weight = calculate_pos_weight_from_csv(Path(args.protection_file))
@@ -87,8 +84,8 @@ def main():
 
     # Inizializzazione del modello binario
     model = BinaryClassifier(
-        sample_emb_dim=dataset_full.sample_emb_dim,
-        habitat_dim=dataset_full.num_habitats,
+        sample_emb_dim=sample_emb_dim,
+        habitat_dim=habitat_dim,
         initial_learning_rate=args.initial_learning_rate,
         pos_weight=pos_weight
     )

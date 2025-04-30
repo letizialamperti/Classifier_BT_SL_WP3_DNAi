@@ -131,14 +131,16 @@ def main():
         model.eval()
         preds_list = []
         true_labels = []
-        for emb, hab, label in val_loader:
-            emb = emb.to(model.device)
-            hab = hab.to(model.device)
-            logit = model(torch.cat((emb, hab), dim=1))
-            prob = torch.sigmoid(logit).cpu().numpy()
-            preds = (prob > 0.5).astype(int)
-            preds_list.extend(preds.tolist())
-            true_labels.extend(label.numpy().tolist())
+        # Disabilita il calcolo del gradiente durante la predizione
+        with torch.no_grad():
+            for emb, hab, label in val_loader:
+                emb = emb.to(model.device)
+                hab = hab.to(model.device)
+                logit = model(torch.cat((emb, hab), dim=1))
+                prob = torch.sigmoid(logit).detach().cpu().numpy()
+                preds = (prob > 0.5).astype(int)
+                preds_list.extend(preds.tolist())
+                true_labels.extend(label.numpy().tolist())
 
         residuals = [p - t for p, t in zip(preds_list, true_labels)]
         val_codes_list = [dataset_full.codes[i] for i in val_indices]

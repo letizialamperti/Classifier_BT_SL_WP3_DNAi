@@ -106,18 +106,13 @@ def main():
         mode='min'
     )
 
-    # Wandb logger
+        # Wandb logger
     wandb_logger = WandbLogger(
         project='ORDNA_Binary',
         save_dir='lightning_logs',
         config=args,
         log_model=False
     )
-    wandb_run = wandb.init(
-        project='ORDNA_Binary',
-        config=args
-    )
-    print(f"DEBUG - Wandb run URL: {wandb_run.url}")
 
     # Trainer
     trainer = pl.Trainer(

@@ -26,6 +26,10 @@ def calculate_pos_weight_from_csv(protection_file: Path) -> torch.Tensor:
 
 
 def main():
+    # Rimuovi eventuali argomenti vuoti per evitare 'unrecognized arguments:'
+    import sys
+    sys.argv = [arg for arg in sys.argv if arg.strip()]
+
     args = get_args()
     if args.arg_log:
         write_config_file(args)
@@ -53,6 +57,20 @@ def main():
     val_codes = kdf['spygen_code'].astype(str).tolist()
     # Indici di train e val
     train_indices = [i for i, code in enumerate(dataset_full.codes) if code not in val_codes]
+    val_indices   = [i for i, code in enumerate(dataset_full.codes) if code in val_codes]
+
+    # Splitting basato sulla colonna 'set' del CSV di cross-validation
+    kdf = pd.read_csv(args.k_cross_file, dtype=str)
+    # Codici di train e val
+    train_codes = kdf.loc[kdf['set'] == 'train', 'spygen_code'].astype(str).tolist()
+    val_codes   = kdf.loc[kdf['set'] != 'train', 'spygen_code'].astype(str).tolist()
+
+    print(f"DEBUG - Total samples: {len(dataset_full)}")
+    print(f"DEBUG - Train codes count: {len(train_codes)}")
+    print(f"DEBUG - Val codes count: {len(val_codes)}")
+
+    # Indici di train e val basati sui codici
+    train_indices = [i for i, code in enumerate(dataset_full.codes) if code in train_codes]
     val_indices   = [i for i, code in enumerate(dataset_full.codes) if code in val_codes]
 
     # Crea Subset e DataLoader

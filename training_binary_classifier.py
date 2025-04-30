@@ -127,6 +127,47 @@ def main():
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
     print(f"DEBUG - Early stopping triggered: {trainer.should_stop}")
+
+    # === Salvataggio predizioni su CSV ===
+    import os
+    # Creazione della cartella per i CSV delle predizioni
+    output_dir = "binary_habitat"
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Nome del fold dal file di split
+    from pathlib import Path as _Path
+    fold_name = _Path(args.k_cross_file).stem
+
+    # Codici e labels per val
+    val_codes_list = [dataset_full.codes[i] for i in val_indices]
+    true_labels    = [int(dataset_full.labels[i]) for i in val_indices]
+
+    # Genera predizioni
+    model.eval()
+    preds_list = []
+    with torch.no_grad():
+        for emb, hab, _ in val_dataset:
+            emb = emb.to(model.device)
+            hab = hab.to(model.device)
+            logit = model(torch.cat((emb, hab), dim=0).unsqueeze(0))
+            prob = torch.sigmoid(logit).item()
+            pred = int(prob > 0.5)
+            preds_list.append(pred)
+
+    # Calcolo del residuale
+    residuals = [preds_list[i] - true_labels[i] for i in range(len(true_labels))]
+
+    # Crea DataFrame e salva
+    import pandas as _pd
+    out_df = _pd.DataFrame({
+        'spygen_code': val_codes_list,
+        'label': true_labels,
+        'prediction': preds_list,
+        'residual': residuals
+    })
+    csv_out = os.path.join(output_dir, f"predictions_{fold_name}.csv")
+    out_df.to_csv(csv_out, index=False)
+    print(f"Saved predictions CSV in folder '{output_dir}': {csv_out}")
     wandb.finish()
 
     print("Starting binary classification training...")

@@ -93,7 +93,49 @@ def main():
         pos_weight=pos_weight
     )
 
-    # Callback, logger e Trainer come prima...
+    # Callback: checkpoint sul val_loss
+    checkpoint_callback = ModelCheckpoint(
+        monitor='val_loss',
+        dirpath='checkpoints_binary_classifier',
+        filename='binary-{epoch:02d}-{val_acc:.2f}',
+        save_top_k=3,
+        mode='min',
+    )
+
+    # Early stopping
+    early_stopping_callback = EarlyStopping(
+        monitor='val_loss',
+        patience=3,
+        mode='min'
+    )
+
+    # Wandb logger
+    wandb_logger = WandbLogger(
+        project='ORDNA_Binary',
+        save_dir='lightning_logs',
+        config=args,
+        log_model=False
+    )
+    wandb_run = wandb.init(
+        project='ORDNA_Binary',
+        config=args
+    )
+    print(f"DEBUG - Wandb run URL: {wandb_run.url}")
+
+    # Trainer
+    trainer = pl.Trainer(
+        accelerator=args.accelerator,
+        max_epochs=args.max_epochs,
+        logger=wandb_logger,
+        callbacks=[checkpoint_callback, early_stopping_callback],
+        log_every_n_steps=10
+    )
+
+    print("Starting binary classification training...")
+    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+
+    print(f"DEBUG - Early stopping triggered: {trainer.should_stop}")
+    wandb.finish()
 
     print("Starting binary classification training...")
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)

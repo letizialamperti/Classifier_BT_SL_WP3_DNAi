@@ -1,33 +1,30 @@
+import os
+import sys
+import pandas as pd
 import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 from merged_dataset import MergedDataset
-from torch.utils.data import DataLoader, Subset
 from ORDNA.models.binary_classifier import BinaryClassifier
 from ORDNA.utils.argparser import get_args, write_config_file
-import wandb
-import pandas as pd
+from torch.utils.data import DataLoader, Subset
 from pathlib import Path
 
+# Funzione per calcolare il peso della classe positiva
 
 def calculate_pos_weight_from_csv(protection_file: Path) -> torch.Tensor:
-    """
-    Calcola il peso per la classe positiva (1) a partire dalla distribuzione dei label in CSV.
-    """
     labels = pd.read_csv(protection_file)['protection']
     counts = labels.value_counts().to_dict()
     neg = counts.get(0, 0)
     pos = counts.get(1, 0)
     if pos == 0:
         raise ValueError("Nessun sample positivo trovato nel file di protezione.")
-    # Peso per la classe positiva: num_neg / num_pos
     return torch.tensor([neg / pos], dtype=torch.float)
 
 
 def main():
-    # Rimuovi eventuali argomenti vuoti per evitare 'unrecognized arguments:'
-    import sys
+    # Pulisce eventuali argomenti vuoti
     sys.argv = [arg for arg in sys.argv if arg.strip()]
 
     args = get_args()
@@ -37,144 +34,124 @@ def main():
     print(f"[rank: 0] Seed set to {args.seed}")
     pl.seed_everything(args.seed)
 
-    # DEBUG: leggere e mostrare le prime righe dei CSV
-    embeddings_df = pd.read_csv(args.embeddings_file)
-    protection_df = pd.read_csv(args.protection_file)
-    habitat_df = pd.read_csv(args.habitat_file)
-    print(f"DEBUG - embeddings_file content:\n{embeddings_df.head()}")
-    print(f"DEBUG - protection_file content:\n{protection_df.head()}")
-    print(f"DEBUG - habitat_file content:\n{habitat_df.head()}")
+    # Percorsi
+    embeddings_file = Path(args.embeddings_file)
+    protection_file = Path(args.protection_file)
+    habitat_file    = Path(args.habitat_file)
+    k_cross_path    = Path(args.k_cross_file)
 
-    # Inizializzazione del DataModule
-        # Carica l'intero dataset
-    dataset_full = MergedDataset(
-        embeddings_file=args.embeddings_file,
-        protection_file=args.protection_file,
-        habitat_file=args.habitat_file
-    )
-    # Calcolo delle dimensioni di input dal dataset
-    sample_emb_dim = dataset_full.embeddings.shape[1]
-    habitat_dim    = dataset_full.habitats.shape[1]
+    # Costruzione cartella output
+    output_dir = Path("binary_habitat")
+    output_dir.mkdir(exist_ok=True)
 
-    # Splitting basato sulla colonna 'set' del CSV di cross-validation
-    kdf = pd.read_csv(args.k_cross_file, dtype=str)
-    # Codici di train e val
-    train_codes = kdf.loc[kdf['set'] == 'train', 'spygen_code'].astype(str).tolist()
-    val_codes   = kdf.loc[kdf['set'] != 'train', 'spygen_code'].astype(str).tolist()
+    # Lista dei file di split
+    if k_cross_path.is_dir():
+        split_files = sorted(k_cross_path.glob("*.csv"))
+    else:
+        split_files = [k_cross_path]
 
-    print(f"DEBUG - Total samples: {len(dataset_full)}")
-    print(f"DEBUG - Train codes count: {len(train_codes)}")
-    print(f"DEBUG - Val codes count: {len(val_codes)}")
+    for split_file in split_files:
+        print(f"=== Processing fold: {split_file.name} ===")
 
-    # Indici di train e val basati sui codici
-    train_indices = [i for i, code in enumerate(dataset_full.codes) if code in train_codes]
-    val_indices   = [i for i, code in enumerate(dataset_full.codes) if code in val_codes]
+        # Carica dataset completo e calcola dimensioni
+        dataset_full = MergedDataset(
+            embeddings_file=str(embeddings_file),
+            protection_file=str(protection_file),
+            habitat_file=str(habitat_file)
+        )
+        sample_emb_dim = dataset_full.embeddings.shape[1]
+        habitat_dim    = dataset_full.habitats.shape[1]
 
-    # Crea Subset e DataLoader
-    train_dataset = Subset(dataset_full, train_indices)
-    val_dataset   = Subset(dataset_full, val_indices)
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, num_workers=4)
-    val_loader   = DataLoader(val_dataset,   batch_size=args.batch_size, num_workers=4)
+        # Carica split
+        kdf = pd.read_csv(split_file, dtype=str)
+        train_codes = kdf.loc[kdf['set'] == 'train', 'spygen_code'].tolist()
+        val_codes   = kdf.loc[kdf['set'] != 'train', 'spygen_code'].tolist()
 
-    print(f"DEBUG - sample_emb_dim: {sample_emb_dim}, habitat_dim: {habitat_dim}")
+        # Indici
+        train_indices = [i for i, code in enumerate(dataset_full.codes) if code in train_codes]
+        val_indices   = [i for i, code in enumerate(dataset_full.codes) if code in val_codes]
 
-    # Calcolo del pos_weight
-    pos_weight = calculate_pos_weight_from_csv(Path(args.protection_file))
-    print(f"DEBUG - Positive class weight: {pos_weight.item():.4f}")
+        # DataLoader
+        train_loader = DataLoader(
+            Subset(dataset_full, train_indices),
+            batch_size=args.batch_size,
+            shuffle=True,
+            num_workers=4
+        )
+        val_dataset = Subset(dataset_full, val_indices)
+        val_loader  = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=4)
 
-    # Inizializzazione del modello binario
-    model = BinaryClassifier(
-        sample_emb_dim=sample_emb_dim,
-        habitat_dim=habitat_dim,
-        initial_learning_rate=args.initial_learning_rate,
-        pos_weight=pos_weight
-    )
+        # Calcolo del pos_weight
+        pos_weight = calculate_pos_weight_from_csv(protection_file)
+        print(f"DEBUG - Positive class weight: {pos_weight.item():.4f}")
 
-    # Callback: checkpoint sul val_loss
-    checkpoint_callback = ModelCheckpoint(
-        monitor='val_loss',
-        dirpath='checkpoints_binary_classifier',
-        filename='binary-{epoch:02d}-{val_acc:.2f}',
-        save_top_k=3,
-        mode='min',
-    )
+        # Inizializzazione modello
+        model = BinaryClassifier(
+            sample_emb_dim=sample_emb_dim,
+            habitat_dim=habitat_dim,
+            initial_learning_rate=args.initial_learning_rate,
+            pos_weight=pos_weight
+        )
 
-    # Early stopping
-    early_stopping_callback = EarlyStopping(
-        monitor='val_loss',
-        patience=3,
-        mode='min'
-    )
+        # Callback e logger
+        checkpoint_callback = ModelCheckpoint(
+            monitor='val_loss',
+            dirpath='checkpoints_binary_classifier',
+            filename=f"binary-{split_file.stem}-{{val_acc:.2f}}",
+            save_top_k=3,
+            mode='min',
+        )
+        early_stopping_callback = EarlyStopping(
+            monitor='val_loss',
+            patience=3,
+            mode='min'
+        )
+        wandb_logger = WandbLogger(
+            project='ORDNA_Binary',
+            save_dir='lightning_logs',
+            config=args,
+            log_model=False
+        )
 
-        # Wandb logger
-    wandb_logger = WandbLogger(
-        project='ORDNA_Binary',
-        save_dir='lightning_logs',
-        config=args,
-        log_model=False
-    )
+        # Trainer
+        trainer = pl.Trainer(
+            accelerator=args.accelerator,
+            max_epochs=args.max_epochs,
+            logger=wandb_logger,
+            callbacks=[checkpoint_callback, early_stopping_callback],
+            log_every_n_steps=10
+        )
 
-    # Trainer
-    trainer = pl.Trainer(
-        accelerator=args.accelerator,
-        max_epochs=args.max_epochs,
-        logger=wandb_logger,
-        callbacks=[checkpoint_callback, early_stopping_callback],
-        log_every_n_steps=10
-    )
+        # Training
+        print("Starting binary classification training...")
+        trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+        print(f"DEBUG - Early stopping triggered: {trainer.should_stop}")
 
-    print("Starting binary classification training...")
-    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
-
-    print(f"DEBUG - Early stopping triggered: {trainer.should_stop}")
-
-    # === Salvataggio predizioni su CSV ===
-    import os
-    # Creazione della cartella per i CSV delle predizioni
-    output_dir = "binary_habitat"
-    os.makedirs(output_dir, exist_ok=True)
-
-    # Nome del fold dal file di split
-    from pathlib import Path as _Path
-    fold_name = _Path(args.k_cross_file).stem
-
-    # Codici e labels per val
-    val_codes_list = [dataset_full.codes[i] for i in val_indices]
-    true_labels    = [int(dataset_full.labels[i]) for i in val_indices]
-
-    # Genera predizioni
-    model.eval()
-    preds_list = []
-    with torch.no_grad():
-        for emb, hab, _ in val_dataset:
+        # Salvataggio predizioni
+        model.eval()
+        preds_list = []
+        true_labels = []
+        for emb, hab, label in val_loader:
             emb = emb.to(model.device)
             hab = hab.to(model.device)
-            logit = model(torch.cat((emb, hab), dim=0).unsqueeze(0))
-            prob = torch.sigmoid(logit).item()
-            pred = int(prob > 0.5)
-            preds_list.append(pred)
+            logit = model(torch.cat((emb, hab), dim=1))
+            prob = torch.sigmoid(logit).cpu().numpy()
+            preds = (prob > 0.5).astype(int)
+            preds_list.extend(preds.tolist())
+            true_labels.extend(label.numpy().tolist())
 
-    # Calcolo del residuale
-    residuals = [preds_list[i] - true_labels[i] for i in range(len(true_labels))]
+        residuals = [p - t for p, t in zip(preds_list, true_labels)]
+        val_codes_list = [dataset_full.codes[i] for i in val_indices]
 
-    # Crea DataFrame e salva
-    import pandas as _pd
-    out_df = _pd.DataFrame({
-        'spygen_code': val_codes_list,
-        'label': true_labels,
-        'prediction': preds_list,
-        'residual': residuals
-    })
-    csv_out = os.path.join(output_dir, f"predictions_{fold_name}.csv")
-    out_df.to_csv(csv_out, index=False)
-    print(f"Saved predictions CSV in folder '{output_dir}': {csv_out}")
-    wandb.finish()
-
-    print("Starting binary classification training...")
-    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
-
-    print(f"DEBUG - Early stopping triggered: {trainer.should_stop}")
-    wandb.finish()
+        out_df = pd.DataFrame({
+            'spygen_code': val_codes_list,
+            'label': true_labels,
+            'prediction': preds_list,
+            'residual': residuals
+        })
+        csv_out = output_dir / f"predictions_{split_file.stem}.csv"
+        out_df.to_csv(csv_out, index=False)
+        print(f"Saved predictions CSV: {csv_out}")
 
 
 if __name__ == '__main__':

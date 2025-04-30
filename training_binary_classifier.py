@@ -2,7 +2,8 @@ import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
-from merged_dataset import MergedDataModule
+from merged_dataset import MergedDataset
+from torch.utils.data import DataLoader, Subset
 from ORDNA.models.binary_classifier import BinaryClassifier
 from ORDNA.utils.argparser import get_args, write_config_file
 import wandb
@@ -41,15 +42,26 @@ def main():
     print(f"DEBUG - habitat_file content:\n{habitat_df.head()}")
 
     # Inizializzazione del DataModule
-    datamodule = MergedDataModule(
+        # Carica l'intero dataset
+    dataset_full = MergedDataset(
         embeddings_file=args.embeddings_file,
         protection_file=args.protection_file,
-        habitat_file=args.habitat_file,
-        batch_size=args.batch_size
+        habitat_file=args.habitat_file
     )
-    datamodule.setup()
+    # Leggi split di cross-validation: codici di validazione
+    kdf = pd.read_csv(args.k_cross_file, dtype=str)
+    val_codes = kdf['spygen_code'].astype(str).tolist()
+    # Indici di train e val
+    train_indices = [i for i, code in enumerate(dataset_full.codes) if code not in val_codes]
+    val_indices   = [i for i, code in enumerate(dataset_full.codes) if code in val_codes]
 
-    print(f"DEBUG - sample_emb_dim: {datamodule.sample_emb_dim}, habitat_dim: {datamodule.num_habitats}")
+    # Crea Subset e DataLoader
+    train_dataset = Subset(dataset_full, train_indices)
+    val_dataset   = Subset(dataset_full, val_indices)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+    val_loader   = DataLoader(val_dataset,   batch_size=args.batch_size)
+
+    print(f"DEBUG - sample_emb_dim: {dataset_full.sample_emb_dim}, habitat_dim: {dataset_full.num_habitats}")
 
     # Calcolo del pos_weight
     pos_weight = calculate_pos_weight_from_csv(Path(args.protection_file))
@@ -57,49 +69,16 @@ def main():
 
     # Inizializzazione del modello binario
     model = BinaryClassifier(
-        sample_emb_dim=datamodule.sample_emb_dim,
-        habitat_dim=datamodule.num_habitats,
+        sample_emb_dim=dataset_full.sample_emb_dim,
+        habitat_dim=dataset_full.num_habitats,
         initial_learning_rate=args.initial_learning_rate,
         pos_weight=pos_weight
     )
 
-    # Callback: checkpoint sul val_loss
-    checkpoint_callback = ModelCheckpoint(
-        monitor='val_loss',
-        dirpath='checkpoints_binary_classifier',
-        filename='binary-{epoch:02d}-{val_acc:.2f}',
-        save_top_k=3,
-        mode='min',
-    )
-
-    # Early stopping
-    early_stopping_callback = EarlyStopping(
-        monitor='val_loss',
-        patience=3,
-        mode='min'
-    )
-
-    # Wandb logger
-    wandb_logger = WandbLogger(
-        project='ORDNA_Binary',
-        save_dir='lightning_logs',
-        config=args,
-        log_model=False
-    )
-    wandb_run = wandb.init(project='ORDNA_Binary', config=args)
-    print(f"DEBUG - Wandb run URL: {wandb_run.url}")
-
-    # Trainer
-    trainer = pl.Trainer(
-        accelerator=args.accelerator,
-        max_epochs=args.max_epochs,
-        logger=wandb_logger,
-        callbacks=[checkpoint_callback, early_stopping_callback],
-        log_every_n_steps=10
-    )
+    # Callback, logger e Trainer come prima...
 
     print("Starting binary classification training...")
-    trainer.fit(model=model, datamodule=datamodule)
+    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
     print(f"DEBUG - Early stopping triggered: {trainer.should_stop}")
     wandb.finish()

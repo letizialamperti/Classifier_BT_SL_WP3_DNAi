@@ -16,8 +16,8 @@ conda activate zioboia
 
 # Percorsi ai dati (EMBEDDINGS e PROTECTION restano invariati)
 EMBEDDINGS_FILE="corse/embedding_coords_460_all_data_.csv"
-PROTECTION_FILE="label/labels_5_levels.csv"
-HABITAT_FILE="habitat/label_habitat_460.csv"
+PROTECTION_FILE="label/label_protection_corse_25.csv"
+HABITAT_FILE="habitat/habitat_corse_25.csv"
 
 echo "Starting habitat-aware cross-validation over 5 folds…"
 
@@ -40,8 +40,8 @@ for fold in {1..5}; do
     --accelerator gpu
 
   # Rinomina il CSV delle metriche aggiungendo il suffisso _habitat
-  METRICS_IN="metrics_5_fold_${fold_padded}.csv"
-  METRICS_OUT="metrics_5_fold_${fold_padded}_habitat.csv"
+  METRICS_IN="metrics_5_fold_${fold_padded}_corse.csv"
+  METRICS_OUT="metrics_5_fold_${fold_padded}_habitat_corse.csv"
   if [[ -f "$METRICS_IN" ]]; then
     mv "$METRICS_IN" "$METRICS_OUT"
     echo "→ Renamed $METRICS_IN to $METRICS_OUT"

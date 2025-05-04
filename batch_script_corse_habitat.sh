@@ -6,8 +6,8 @@ set -e  # Termina lo script se si verifica un errore
 #OAR -n classifier-habitat-job
 #OAR -l /nodes=1/gpu=1/core=12,walltime=24:00:00
 #OAR -p gpumodel='A100'
-#OAR --stdout classifier-habitat-log.out
-#OAR --stderr classifier-habitat-err.out
+#OAR --stdout classifier-corse-habitat-log.out
+#OAR --stderr classifier-corse-habitat-err.out
 #OAR --project pr-qiepb
 
 # Attiva l'ambiente Conda

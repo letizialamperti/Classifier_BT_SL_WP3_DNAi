@@ -12,12 +12,27 @@ from ORDNA.utils.argparser import get_args, write_config_file
 from pathlib import Path
 
 def calculate_class_weights_from_csv_coral(protection_file: Path, num_classes: int) -> torch.Tensor:
+    """
+    Calcola i pesi per la CORAL loss basati sulla distribuzione delle etichette,
+    assicurando che tutte le classi 0..num_classes-1 compaiano (anche con conteggio 0).
+    """
     labels_df = pd.read_csv(protection_file)
-    counts   = labels_df['protection'].value_counts().sort_index()
-    cw       = 1.0 / counts
-    cw       = cw / cw.sum() * num_classes
-    thresh_w = [(cw[i] + cw[i+1]) / 2 for i in range(len(cw)-1)]
-    return torch.tensor(thresh_w, dtype=torch.float)
+    # 1) Conta le occorrenze di ciascuna classe e ri-indicizza su 0..num_classes-1
+    counts = labels_df['protection'].value_counts().sort_index()
+    counts = counts.reindex(range(num_classes), fill_value=0)
+
+    # 2) Inversione con epsilon e normalizzazione
+    eps = 1e-9
+    cw = 1.0 / (counts + eps)
+    cw = cw / cw.sum() * num_classes
+
+    # 3) Converti in array per indicizzazione posizionale
+    cw_arr = cw.to_numpy()   # shape == (num_classes,)
+
+    # 4) Calcolo dei pesi di soglia come media di quelli adiacenti
+    threshold_weights = [(cw_arr[i] + cw_arr[i+1]) / 2 for i in range(num_classes - 1)]
+
+    return torch.tensor(threshold_weights, dtype=torch.float)
 
 def main():
     args = get_args()

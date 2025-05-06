@@ -12,17 +12,22 @@ from pathlib import Path
 # Function to calculate class weights for CORAL
 def calculate_class_weights_from_csv_coral(protection_file: Path, num_classes: int) -> torch.Tensor:
     """
-    Calculate weights for CORAL loss based on label distribution from CSV.
+    Calculate weights for CORAL loss based on label distribution from CSV,
+    ensuring classes 0..num_classes-1 siano sempre presenti.
     """
     labels_df = pd.read_csv(protection_file)
-    label_counts = labels_df['protection'].value_counts().sort_index()
+    # Conta le occorrenze per ogni classe e ri-indicizza per includere tutte le classi
+    counts = labels_df['protection'].value_counts().sort_index()
+    counts = counts.reindex(range(num_classes), fill_value=0)
 
-    # Calculate class weights based on label distribution
-    class_weights = 1.0 / label_counts
-    class_weights = class_weights / class_weights.sum() * num_classes  # Normalize weights
+    # Evita divisione per zero
+    eps = 1e-9
+    # Inversione e normalizzazione
+    cw = 1.0 / (counts + eps)
+    cw = cw / cw.sum() * num_classes
 
-    # CORAL: Use threshold weights (average between consecutive class weights)
-    threshold_weights = [(class_weights[i] + class_weights[i + 1]) / 2 for i in range(num_classes - 1)]
+    # Media tra pesi di classi adiacenti per ottenere i pesi delle soglie
+    threshold_weights = [(cw[i] + cw[i+1]) / 2 for i in range(num_classes - 1)]
     return torch.tensor(threshold_weights, dtype=torch.float)
 
 # Main function for training the classifier

@@ -25,7 +25,7 @@ def calculate_class_weights_from_csv_coral(protection_file: Path, num_classes: i
     cw = 1.0 / (counts + eps)
     cw = cw / cw.sum() * num_classes
 
-    # 3) Passaggio a vettore numpy per indicizzazione posizionale
+    # 3) Converti in array per indicizzazione posizionale
     cw_arr = cw.to_numpy()   # shape == (num_classes,)
 
     # 4) Calcolo dei pesi di soglia come media di quelli adiacenti

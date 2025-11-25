@@ -42,7 +42,7 @@ class CombinedDataModule(pl.LightningDataModule):
         self.dataset = CombinedDataset(self.embeddings_file, self.habitat_labels_file)
 
     def train_dataloader(self):
-        return DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True, num_workers=4)
+        return DataLoader(self.dataset, batch_size=self.batch_size, shuffle=True, num_workers=4, drop_last=True)
 
     def val_dataloader(self):
-        return DataLoader(self.dataset, batch_size=self.batch_size, shuffle=False, num_workers=4)
+        return DataLoader(self.dataset, batch_size=self.batch_size, shuffle=False, num_workers=4, drop_last=True)

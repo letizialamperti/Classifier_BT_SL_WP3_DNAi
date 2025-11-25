@@ -76,8 +76,8 @@ def main():
             Subset(dataset_full, train_indices),
             batch_size=args.batch_size,
             shuffle=True,
-            num_workers=4
-        )
+            num_workers=4,
+            drop_last=True)
         val_dataset = Subset(dataset_full, val_indices)
         val_loader  = DataLoader(val_dataset, batch_size=args.batch_size, num_workers=4)
 

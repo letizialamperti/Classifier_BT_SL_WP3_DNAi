@@ -61,11 +61,13 @@ def main():
     train_loader = DataLoader(train_ds,
                               batch_size=args.batch_size,
                               shuffle=True,
-                              num_workers=4)
+                              num_workers=4,
+                              drop_last=True)
     val_loader   = DataLoader(val_ds,
                               batch_size=args.batch_size,
                               shuffle=False,
-                              num_workers=4)
+                              num_workers=4,
+                              drop_last=True)
 
     # 3) pesi CORAL
     class_weights = calculate_class_weights_from_csv_coral(

@@ -66,8 +66,7 @@ def main():
     val_loader   = DataLoader(val_ds,
                               batch_size=args.batch_size,
                               shuffle=False,
-                              num_workers=4,
-                              drop_last=True)
+                              num_workers=4)
 
     # 3) pesi CORAL
     class_weights = calculate_class_weights_from_csv_coral(

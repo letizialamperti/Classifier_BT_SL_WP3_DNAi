@@ -1,0 +1,203 @@
+import argparse
+from pathlib import Path
+
+import pandas as pd
+import torch
+from torch.utils.data import DataLoader
+import pytorch_lightning as pl
+
+from merged_dataset import MergedDataset
+from ORDNA.models.binary_classifier import BinaryClassifier
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Test a trained binary classifier on a new dataset"
+    )
+
+    parser.add_argument(
+        "--embeddings_file", type=str, required=True,
+        help="Path to embeddings file for the TEST set"
+    )
+    parser.add_argument(
+        "--protection_file", type=str, required=True,
+        help="Path to BINARY protection labels CSV for the TEST set"
+    )
+    parser.add_argument(
+        "--habitat_file", type=str, required=True,
+        help="Path to habitat labels CSV for the TEST set"
+    )
+
+    parser.add_argument(
+        "--checkpoint", type=str, required=True,
+        help="Path to trained BinaryClassifier checkpoint (.ckpt)"
+    )
+
+    parser.add_argument(
+        "--batch_size", type=int, default=32,
+        help="Batch size for testing"
+    )
+    parser.add_argument(
+        "--accelerator", type=str, default="auto",
+        choices=["auto", "cpu", "gpu"],
+        help="Device to use (auto/cpu/gpu)"
+    )
+    parser.add_argument(
+        "--seed", type=int, default=42,
+        help="Random seed"
+    )
+
+    parser.add_argument(
+        "--output_csv", type=str, default="binary_test_predictions.csv",
+        help="Output CSV file with per-sample predictions"
+    )
+
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    print(f"[rank: 0] Seed set to {args.seed}")
+    pl.seed_everything(args.seed)
+
+    # ------------------------------------------------------------------
+    # 1) Carica il dataset di TEST completo
+    # ------------------------------------------------------------------
+    print("Loading test dataset...")
+    test_ds = MergedDataset(
+        embeddings_file=args.embeddings_file,
+        protection_file=args.protection_file,
+        habitat_file=args.habitat_file
+    )
+
+    sample_emb_dim = test_ds.embeddings.shape[1]
+    habitat_dim    = test_ds.habitats.shape[1]
+
+    prot_df = pd.read_csv(args.protection_file)
+    unique_labels = sorted(prot_df["protection"].unique())
+    print(f"Unique labels in test protection file: {unique_labels}")
+
+    print(f"Test samples: {len(test_ds)}")
+    print(f"Embedding dim: {sample_emb_dim}, habitat dim: {habitat_dim}")
+
+    test_loader = DataLoader(
+        test_ds,
+        batch_size=args.batch_size,
+        shuffle=False,
+        num_workers=4,
+        drop_last=False
+    )
+
+    # ------------------------------------------------------------------
+    # 2) Carica il modello dal checkpoint
+    # ------------------------------------------------------------------
+    ckpt_path = Path(args.checkpoint)
+    if not ckpt_path.exists():
+        raise FileNotFoundError(f"Checkpoint not found: {ckpt_path}")
+
+    print(f"Loading BinaryClassifier from checkpoint: {ckpt_path}")
+
+    # Caso standard: BinaryClassifier salva i suoi hyperparams nel checkpoint
+    model: BinaryClassifier = BinaryClassifier.load_from_checkpoint(str(ckpt_path))
+    model.eval()
+
+    # Device
+    if args.accelerator == "gpu" and torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif args.accelerator == "cpu":
+        device = torch.device("cpu")
+    else:
+        # "auto": usa GPU se disponibile
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    model.to(device)
+    print(f"Using device: {device}")
+
+    # ------------------------------------------------------------------
+    # 3) Loop di test: predizioni + raccolta etichette
+    # ------------------------------------------------------------------
+    all_probs  = []  # opzionale: probabilità classe positiva
+    all_preds  = []
+    all_labels = []
+
+    with torch.no_grad():
+        for emb, hab, lab in test_loader:
+            emb = emb.to(device)
+            hab = hab.to(device)
+
+            x     = torch.cat((emb, hab), dim=1)
+            logit = model(x)  # [batch, 1] o [batch]
+            prob  = torch.sigmoid(logit).detach().cpu().numpy().reshape(-1)
+            preds = (prob > 0.5).astype(int)
+
+            all_probs.extend(prob.tolist())
+            all_preds.extend(preds.tolist())
+            all_labels.extend(lab.numpy().tolist())
+
+    # Codici nell'ordine naturale del dataset (shuffle=False)
+    codes = [str(code) for code in test_ds.codes]
+
+    if not (len(codes) == len(all_labels) == len(all_preds)):
+        raise RuntimeError(
+            f"Length mismatch: len(codes)={len(codes)}, "
+            f"len(labels)={len(all_labels)}, len(preds)={len(all_preds)}"
+        )
+
+    residuals = [p - t for p, t in zip(all_preds, all_labels)]
+
+    # ------------------------------------------------------------------
+    # 4) Salva le predizioni in un CSV
+    # ------------------------------------------------------------------
+    df_out = pd.DataFrame({
+        "spygen_code": codes,
+        "label":       all_labels,
+        "prediction":  all_preds,
+        "residual":    residuals,
+        "prob_pos":    all_probs,  # opzionale ma utile
+    })
+
+    out_path = Path(args.output_csv)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    df_out.to_csv(out_path, index=False)
+    print(f"Saved per-sample predictions to: {out_path}")
+
+    # ------------------------------------------------------------------
+    # 5) Metriche globali (accuracy, precision, recall, F1, ecc.)
+    # ------------------------------------------------------------------
+    correct = sum(int(l == p) for l, p in zip(all_labels, all_preds))
+    acc = correct / len(all_labels) if all_labels else float("nan")
+    print(f"Accuracy: {acc:.4f}  ({correct}/{len(all_labels)})")
+
+    try:
+        from sklearn.metrics import (
+            precision_score,
+            recall_score,
+            f1_score,
+            roc_auc_score,
+            classification_report,
+        )
+
+        prec = precision_score(all_labels, all_preds, zero_division=0)
+        rec  = recall_score(all_labels, all_preds, zero_division=0)
+        f1   = f1_score(all_labels, all_preds, zero_division=0)
+
+        print(f"Precision: {prec:.4f}")
+        print(f"Recall:    {rec:.4f}")
+        print(f"F1-score:  {f1:.4f}")
+
+        try:
+            auc = roc_auc_score(all_labels, all_probs)
+            print(f"ROC-AUC:   {auc:.4f}")
+        except ValueError:
+            print("ROC-AUC not defined (possibly only one class present in labels).")
+
+        print("\nClassification report:")
+        print(classification_report(all_labels, all_preds, digits=3))
+    except ImportError:
+        print("scikit-learn not installed → only accuracy printed. "
+              "Install with `pip install scikit-learn` for more metrics.")
+
+
+if __name__ == "__main__":
+    main()

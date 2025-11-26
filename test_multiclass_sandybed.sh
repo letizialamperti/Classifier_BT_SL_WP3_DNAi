@@ -23,7 +23,7 @@ PROTECTION_FILE="label/label_protection_coralligenous.csv"
 HABITAT_FILE="habitat/label_habitat_coralligenous.csv"
 
 # Checkpoint allenato in precedenza
-CHECKPOINT="CV_Class/nuwsq04j/checkpoints/epoch=2-step=33.ckpt"
+CHECKPOINT="CV_Class/ic9pb38u/checkpoints/epoch=1-step=24.ckpt"
 
 # Output CSV con le predizioni per campione
 OUTPUT_CSV="test_sandy/multiclass_sandybed_test.csv"

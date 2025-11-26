@@ -23,7 +23,7 @@ echo "Starting habitat-aware cross-validation over 5 folds…"
 
 for fold in {1..5}; do
   fold_padded=$(printf "%02d" "$fold")
-  K_CROSS_FILE="k_cross/split_5_10km_sandy_bed_${fold_padded}.csv"
+  K_CROSS_FILE="k_cross/split_5_20km_sandy_bed_${fold_padded}.csv"
   echo "=== Fold $fold_padded: using split $K_CROSS_FILE and habitat $HABITAT_FILE ==="
 
   # Avvia il training sul fold corrente

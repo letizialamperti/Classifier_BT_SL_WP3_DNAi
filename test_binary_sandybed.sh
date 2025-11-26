@@ -28,7 +28,7 @@ PROTECTION_FILE="label/label_binaryprotection_coralligenous.csv"
 HABITAT_FILE="habitat/label_habitat_coralligenous.csv"
 
 # checkpoint scelto manualmente (SOSTITUISCI!)
-CHECKPOINT="checkpoints_binary_classifier/binary-split_5_20km_sandy_bed_02-val_acc=0.73.ckpt"
+CHECKPOINT="checkpoints_binary_classifier/binary-split_5_20km_sandy_bed_01-val_acc=0.89.ckpt"
 
 # output
 OUTPUT_CSV="binary_test_predictions_model3.csv"

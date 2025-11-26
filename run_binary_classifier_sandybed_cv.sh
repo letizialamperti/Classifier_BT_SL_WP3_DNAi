@@ -39,7 +39,7 @@ for fold in {1..5}; do
     --seed 42
 
   METRICS_IN="metrics_5_fold_${fold_padded}.csv"
-  METRICS_OUT="metrics_5_binary_fold_sandybed_${fold_padded}.csv"
+  METRICS_OUT="split_5_20km_sandy_bed_${fold_padded}.csv"
   if [[ -f "${METRICS_IN}" ]]; then
     mv "${METRICS_IN}" "${METRICS_OUT}"
     echo "→ Renamed ${METRICS_IN} to ${METRICS_OUT}"

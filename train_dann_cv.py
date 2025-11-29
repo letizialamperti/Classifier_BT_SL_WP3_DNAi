@@ -9,6 +9,7 @@ from pytorch_lightning.loggers import WandbLogger
 from pathlib import Path
 
 from merged_dataset_dann import MergedDatasetDANN
+from ORDNA.models.classifier import coral_to_label
 from ORDNA.models.dann_classifier import DANNClassifier
 from ORDNA.utils.argparser import get_args, write_config_file
 

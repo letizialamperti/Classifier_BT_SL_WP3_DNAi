@@ -8,7 +8,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 from pathlib import Path
 
-from merged_dataset import MergedDatasetDANN
+from merged_dataset_dann import MergedDatasetDANN
 from ORDNA.models.dann_classifier import DANNClassifier
 from ORDNA.utils.argparser import get_args, write_config_file
 

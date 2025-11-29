@@ -8,7 +8,7 @@ from pytorch_lightning.loggers import WandbLogger
 from torch.utils.data import DataLoader, Subset
 from pathlib import Path
 
-from merged_dataset import MergedDatasetDANN
+from merged_dataset_dann import MergedDatasetDANN
 from ORDNA.models.binary_dann_classifier import BinaryDANNClassifier
 from ORDNA.utils.argparser import get_args, write_config_file
 

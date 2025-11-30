@@ -138,15 +138,15 @@ def main():
         )
 
         checkpoint_callback = ModelCheckpoint(
-            monitor='val_total_loss',
+            monitor='val_class_loss',
             dirpath='checkpoints_dann_classifier',
             filename=f"dann-{split_file.stem}" + "-{val_accuracy:.2f}",
             save_top_k=3,
             mode='min',
         )
         early_stopping_callback = EarlyStopping(
-            monitor='val_total_loss',
-            patience=5,
+            monitor='val_class_loss',
+            patience=10,
             mode='min'
         )
 

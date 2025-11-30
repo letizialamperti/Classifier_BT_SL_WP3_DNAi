@@ -47,7 +47,7 @@ for fold in {1..5}; do
     --initial_learning_rate 1e-3 \
     --max_epochs 100 \
     --accelerator gpu \
-    --lambda_domain 1.0 \
+    --lambda_domain 0 \
     --seed 42
 
   # train_binary_dann.py should save e.g.:

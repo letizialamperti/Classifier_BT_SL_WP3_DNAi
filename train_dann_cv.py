@@ -146,7 +146,7 @@ def main():
         )
         early_stopping_callback = EarlyStopping(
             monitor='val_class_loss',
-            patience=5,
+            patience=10,
             mode='min'
         )
 

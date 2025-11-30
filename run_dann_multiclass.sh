@@ -47,7 +47,7 @@ for fold in {1..5}; do
     --batch_size 10 \
     --initial_learning_rate 1e-3 \
     --max_epochs 100 \
-    --lambda_domain 0.5 \
+    --lambda_domain 0.8 \
     --accelerator gpu
 
   # train_dann_cv.py dovrebbe salvare:

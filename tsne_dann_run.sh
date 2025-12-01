@@ -33,7 +33,7 @@ CHECKPOINT="checkpoints_dann_classifier/dann-split_5_fold_03-val_accuracy=0.96.c
 NUM_CLASSES=5
 BATCH_SIZE=64
 PERPLEXITY=30
-LAMBDA_DOMAIN=0
+LAMBDA_DOMAIN=0.5
 
 echo "Running t-SNE visualization for checkpoint: $CHECKPOINT"
 

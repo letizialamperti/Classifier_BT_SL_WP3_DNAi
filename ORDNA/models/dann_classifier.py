@@ -147,7 +147,7 @@ class DANNClassifier(pl.LightningModule):
         loss_domain = F.cross_entropy(logits_domain, domains.long())
 
         # ----- Total -----
-        loss = loss_task + self.lambda_domain * loss_domain
+        loss = loss_task + loss_domain
 
         # Task metrics
         acc  = self.train_accuracy(pred_labels, labels)
@@ -201,7 +201,7 @@ class DANNClassifier(pl.LightningModule):
         logits_domain = self.domain_head(z_rev)
         loss_domain = F.cross_entropy(logits_domain, domains.long())
 
-        loss = loss_task + self.lambda_domain * loss_domain
+        loss = loss_task + loss_domain
 
         # Task metrics
         acc  = self.val_accuracy(pred_labels, labels)
@@ -238,6 +238,7 @@ class DANNClassifier(pl.LightningModule):
     # ================================================================
     # ----------------- END OF VALIDATION EPOCH -----------------------
     # ================================================================
+    
     def on_validation_epoch_end(self):
 
         if len(self.validation_preds) == 0:
@@ -291,7 +292,7 @@ class DANNClassifier(pl.LightningModule):
                 patience=5,
                 verbose=True
             ),
-            'monitor': 'val_total_loss'
+            'monitor': 'val_class_loss'
         }
 
         return [optimizer], [scheduler]

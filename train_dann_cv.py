@@ -136,22 +136,23 @@ def main():
             config=args,
             log_model=False
         )
-        
-        # Nome cartella unica per tutti i K fold, basata su lambda
-        lambda_str = str(lambda_domain).replace(".", "_")   # es: 1.0 → "1_0"
-        ckpt_dir = Path(f"checkpoints_dann_classifier/lambda_{lambda_str}")
+
+        # Nome della run WandB
+        run_name = wandb_logger.experiment.name  # es: "cool-sun-42"
+
+        # Cartella dedicata per i checkpoint di questa run
+        ckpt_dir = Path("checkpoints_dann_classifier") / run_name
         ckpt_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Nome del file checkpoint per questo fold
+
+        # Salviamo SOLO il best checkpoint
         checkpoint_callback = ModelCheckpoint(
             monitor='val_class_loss',
             dirpath=str(ckpt_dir),
-            filename=f"{split_file.stem}-best",    # esempio: fold_1-best.ckpt
+            filename=f"{split_file.stem}-best",
             save_top_k=1,
             save_last=False,
             mode='min'
         )
-        
 
         # Early stopping
         early_stopping_callback = EarlyStopping(
@@ -226,9 +227,21 @@ def main():
             'domain_correct':dom_correct
         })
 
-        csv_out = output_dir / f"dann_metrics_{split_file.stem}.csv"
+        # ---- SALVATAGGIO CSV METRICHE PER FOLD ----
+        
+        # stringa "file-safe" per lambda, es: 1.0 -> "1_0"
+        lambda_str = str(lambda_domain).replace('.', '_')
+        
+        # cartella dedicata per questo valore di lambda
+        lambda_metrics_dir = output_dir / f"lambda_{lambda_str}"
+        lambda_metrics_dir.mkdir(parents=True, exist_ok=True)
+        
+        # nome del file CSV (es: dann_metrics_split1.csv)
+        csv_out = lambda_metrics_dir / f"dann_metrics_{split_file.stem}.csv"
+        
         out_df.to_csv(csv_out, index=False)
         print(f"Saved DANN metrics CSV: {csv_out}")
+
 
     print("All DANN folds done!")
 

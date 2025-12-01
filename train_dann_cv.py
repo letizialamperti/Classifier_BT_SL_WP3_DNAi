@@ -85,7 +85,7 @@ def main():
 
         # Indici nel dataset_full
         code_to_idx = {code: i for i, code in enumerate(dataset_full.codes)}
-        train_indices = [code: = code_to_idx[c] for c in train_codes if c in code_to_idx]
+        train_indices = train_indices = [code_to_idx[c] for c in train_codes if c in code_to_idx]
         val_indices   = [code_to_idx[c] for c in val_codes   if c in code_to_idx]
 
         print(f"  → train size: {len(train_indices)}")

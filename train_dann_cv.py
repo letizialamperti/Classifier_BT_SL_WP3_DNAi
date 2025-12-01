@@ -85,7 +85,7 @@ def main():
 
         # Indici nel dataset_full
         code_to_idx = {code: i for i, code in enumerate(dataset_full.codes)}
-        train_indices = [code_to_idx[c] for c in train_codes if c in code_to_idx]
+        train_indices = [code: = code_to_idx[c] for c in train_codes if c in code_to_idx]
         val_indices   = [code_to_idx[c] for c in val_codes   if c in code_to_idx]
 
         print(f"  → train size: {len(train_indices)}")
@@ -164,8 +164,12 @@ def main():
 
         # ------------------ PREDIZIONI SU VAL E METRIC CSV -------------------
         model.eval()
-        preds_list   = []
-        true_labels  = []
+        preds_list        = []
+        true_labels       = []
+        dom_true_list     = []
+        dom_pred_list     = []
+
+        # ordiniamo i codici val in base a val_indices (stesso ordine del DataLoader con shuffle=False)
         val_codes_list = [dataset_full.codes[i] for i in val_indices]
 
         with torch.no_grad():
@@ -173,22 +177,43 @@ def main():
                 emb = emb.to(model.device)
                 hab = hab.to(model.device)
                 lab = lab.to(model.device)
+                dom = dom.to(model.device)
 
-                x   = torch.cat((emb, hab), dim=1)
-                logits = model(x)  # CORAL logits
-                pred = coral_to_label(logits).detach().cpu().numpy()
+                x      = torch.cat((emb, hab), dim=1)
+
+                # logits task (CORAL)
+                logits_task = model(x)
+                pred = coral_to_label(logits_task).detach().cpu().numpy()
+
+                # logits dominio (usiamo encoder + domain_head)
+                z = model.encoder(x)
+                logits_dom = model.domain_head(z)
+                dom_pred = torch.argmax(logits_dom, dim=1).detach().cpu().numpy()
 
                 preds_list.extend(pred.tolist())
                 true_labels.extend(lab.cpu().numpy().tolist())
+                dom_true_list.extend(dom.cpu().numpy().tolist())
+                dom_pred_list.extend(dom_pred.tolist())
 
         residuals = [l - p for l, p in zip(true_labels, preds_list)]
+        dom_correct = [int(t == p) for t, p in zip(dom_true_list, dom_pred_list)]
+        if len(dom_correct) > 0:
+            domain_accuracy = sum(dom_correct) / len(dom_correct)
+        else:
+            domain_accuracy = float('nan')
+
+        print(f"  → Domain accuracy (val set) for fold {split_file.name}: {domain_accuracy:.4f}")
 
         out_df = pd.DataFrame({
-            'spygen_code': val_codes_list,
-            'label':       true_labels,
-            'prediction':  preds_list,
-            'residual':    residuals
+            'spygen_code':   val_codes_list,
+            'label':         true_labels,
+            'prediction':    preds_list,
+            'residual':      residuals,
+            'domain_true':   dom_true_list,
+            'domain_pred':   dom_pred_list,
+            'domain_correct':dom_correct
         })
+
         csv_out = output_dir / f"dann_metrics_{split_file.stem}.csv"
         out_df.to_csv(csv_out, index=False)
         print(f"Saved DANN metrics CSV: {csv_out}")

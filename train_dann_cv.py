@@ -129,7 +129,7 @@ def main():
             class_weights=class_weights
         )
 
-        # Logger e callback
+        # Logger W&B
         wandb_logger = WandbLogger(
             project='ORDNA_DANN',
             save_dir='lightning_logs',
@@ -137,19 +137,31 @@ def main():
             log_model=False
         )
 
+        # Nome della run WandB
+        run_name = wandb_logger.experiment.name  # es: "cool-sun-42"
+
+        # Cartella dedicata per i checkpoint di questa run
+        ckpt_dir = Path("checkpoints_dann_classifier") / run_name
+        ckpt_dir.mkdir(parents=True, exist_ok=True)
+
+        # Salviamo SOLO il best checkpoint
         checkpoint_callback = ModelCheckpoint(
             monitor='val_class_loss',
-            dirpath='checkpoints_dann_classifier',
-            filename=f"dann-{split_file.stem}" + "-{val_accuracy:.2f}",
-            save_top_k=3,
-            mode='min',
+            dirpath=str(ckpt_dir),
+            filename=f"{split_file.stem}-best",
+            save_top_k=1,
+            save_last=False,
+            mode='min'
         )
+
+        # Early stopping
         early_stopping_callback = EarlyStopping(
             monitor='val_class_loss',
             patience=10,
             mode='min'
         )
 
+        # Trainer
         trainer = pl.Trainer(
             accelerator=args.accelerator,
             max_epochs=args.max_epochs,
@@ -157,6 +169,7 @@ def main():
             callbacks=[checkpoint_callback, early_stopping_callback],
             log_every_n_steps=10
         )
+
 
         print("Starting DANN training...")
         trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)

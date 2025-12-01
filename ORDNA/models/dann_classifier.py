@@ -137,7 +137,7 @@ class DANNClassifier(pl.LightningModule):
         loss_domain = F.cross_entropy(logits_domain, domains.long())
 
         # Loss totale
-        loss = loss_task + self.lambda_domain * loss_domain
+        loss = loss_task +  loss_domain
 
         # Metriche task
         acc  = self.train_accuracy(pred_labels, labels)
@@ -186,7 +186,7 @@ class DANNClassifier(pl.LightningModule):
         logits_domain = self.domain_head(z_rev)
         loss_domain = F.cross_entropy(logits_domain, domains.long())
 
-        loss = loss_task + self.lambda_domain * loss_domain
+        loss = loss_task +  loss_domain
 
         # Metriche task
         acc  = self.val_accuracy(pred_labels, labels)
@@ -274,6 +274,6 @@ class DANNClassifier(pl.LightningModule):
             'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, mode='min', factor=0.1, patience=5, verbose=True
             ),
-            'monitor': 'val_total_loss'
+            'monitor': 'val_class_loss'
         }
         return [optimizer], [scheduler]

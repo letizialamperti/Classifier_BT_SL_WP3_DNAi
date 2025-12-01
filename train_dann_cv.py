@@ -136,23 +136,22 @@ def main():
             config=args,
             log_model=False
         )
-
-        # Nome della run WandB
-        run_name = wandb_logger.experiment.name  # es: "cool-sun-42"
-
-        # Cartella dedicata per i checkpoint di questa run
-        ckpt_dir = Path("checkpoints_dann_classifier") / run_name
+        
+        # Nome cartella unica per tutti i K fold, basata su lambda
+        lambda_str = str(lambda_domain).replace(".", "_")   # es: 1.0 → "1_0"
+        ckpt_dir = Path(f"checkpoints_dann_classifier/lambda_{lambda_str}")
         ckpt_dir.mkdir(parents=True, exist_ok=True)
-
-        # Salviamo SOLO il best checkpoint
+        
+        # Nome del file checkpoint per questo fold
         checkpoint_callback = ModelCheckpoint(
             monitor='val_class_loss',
             dirpath=str(ckpt_dir),
-            filename=f"{split_file.stem}-best",
+            filename=f"{split_file.stem}-best",    # esempio: fold_1-best.ckpt
             save_top_k=1,
             save_last=False,
             mode='min'
         )
+        
 
         # Early stopping
         early_stopping_callback = EarlyStopping(

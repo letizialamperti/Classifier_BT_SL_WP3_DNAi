@@ -25,7 +25,7 @@ PROTECTION="label/labels_5_levels.csv"
 HABITAT="habitat/label_habitat_460.csv"
 
 # === Choose the checkpoint you want to visualize ===
-CHECKPOINT="checkpoints_dann_classifier/dann-split_5_fold_03-val_accuracy=0.95-v2.ckpt"
+CHECKPOINT="checkpoints_dann_classifier/dann-split_5_fold_03-val_accuracy=0.98.ckpt"
 
 # ==========================
 #      t-SNE ARGUMENTS
@@ -33,7 +33,7 @@ CHECKPOINT="checkpoints_dann_classifier/dann-split_5_fold_03-val_accuracy=0.95-v
 NUM_CLASSES=5
 BATCH_SIZE=64
 PERPLEXITY=30
-LAMBDA_DOMAIN=0.5
+LAMBDA_DOMAIN=1
 
 echo "Running t-SNE visualization for checkpoint: $CHECKPOINT"
 
@@ -47,6 +47,6 @@ python visualize_dann_tsne.py \
     --perplexity $PERPLEXITY \
     --lambda_domain $LAMBDA_DOMAIN \
     --device cuda \
-    --output_prefix "tsne_fold03_lambda05"
+    --output_prefix "tsne_fold03_lambda1"
 
 echo "t-SNE visualization complete!"

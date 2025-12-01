@@ -105,7 +105,7 @@ def main():
     Z, Y, D = extract_latent(model, loader, args.device)
 
     # === t-SNE ===
-    tsne = TSNE(n_components=2, perplexity=args.perplexity, learning_rate="auto")
+    tsne = TSNE(n_components=2, perplexity=args.perplexity, learning_rate="auto", init="random", random_state=42)
     Z_2d = tsne.fit_transform(Z)
 
     # === Plot protection ===

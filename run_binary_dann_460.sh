@@ -48,7 +48,7 @@ for fold in {1..5}; do
     --max_epochs 100 \
     --accelerator gpu \
     --lambda_domain 2 \
-    --num_classes 2 \
+    --num_classes 4 \
     --seed 42
 
 

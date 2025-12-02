@@ -33,7 +33,7 @@ CHECKPOINT="checkpoints_dann_classifier/lambda_0_0/split_5_fold_03-best.ckpt"
 NUM_CLASSES=5
 BATCH_SIZE=64
 PERPLEXITY=30
-LAMBDA_DOMAIN=0.5
+LAMBDA_DOMAIN=0
 
 echo "Running t-SNE visualization for checkpoint: $CHECKPOINT"
 

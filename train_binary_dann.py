@@ -127,7 +127,7 @@ def main():
         lambda_str = str(lambda_domain).replace('.', '_')
 
         # Cartella dedicata per questo valore di lambda (UNICA per tutti i fold)
-        ckpt_dir = Path("checkpoints_dann_classifier") / f"lambda_{lambda_str}"
+        ckpt_dir = Path("checkpoints_binary_dann_classifier") / f"lambda_{lambda_str}"
         ckpt_dir.mkdir(parents=True, exist_ok=True)
 
         # Salviamo SOLO il best checkpoint per questo fold

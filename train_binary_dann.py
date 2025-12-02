@@ -42,7 +42,7 @@ def main():
     k_cross_path    = Path(args.k_cross_file)
 
     # Costruzione cartella output
-    output_dir = Path("binary_dann")
+    output_dir = Path("metrics_binary_dann")
     output_dir.mkdir(exist_ok=True)
 
     # Lista dei file di split

@@ -132,7 +132,7 @@ def main():
 
         # Salviamo SOLO il best checkpoint per questo fold
         checkpoint_callback = ModelCheckpoint(
-            monitor='val_class_loss',
+            monitor='val_task_loss',
             dirpath=str(ckpt_dir),
             filename=f"{split_file.stem}-best",  # es: fold1-best.ckpt
             save_top_k=1,

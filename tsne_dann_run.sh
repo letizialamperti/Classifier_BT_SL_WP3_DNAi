@@ -25,7 +25,7 @@ PROTECTION="label/labels_5_levels.csv"
 HABITAT="habitat/label_habitat_460.csv"
 
 # === Choose the checkpoint you want to visualize ===
-CHECKPOINT="checkpoints_dann_classifier/lambda_4_0/split_5_fold_03-best.ckpt"
+CHECKPOINT="checkpoints_dann_classifier/lambda_2_0/split_5_fold_04-best.ckpt"
 
 # ==========================
 #      t-SNE ARGUMENTS
@@ -33,7 +33,7 @@ CHECKPOINT="checkpoints_dann_classifier/lambda_4_0/split_5_fold_03-best.ckpt"
 NUM_CLASSES=5
 BATCH_SIZE=64
 PERPLEXITY=20
-LAMBDA_DOMAIN=4
+LAMBDA_DOMAIN=2
 
 echo "Running t-SNE visualization for checkpoint: $CHECKPOINT"
 

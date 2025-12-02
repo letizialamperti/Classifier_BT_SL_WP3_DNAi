@@ -271,6 +271,6 @@ class BinaryDANNClassifier(pl.LightningModule):
             'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, mode='min', factor=0.1, patience=5, verbose=True
             ),
-            'monitor': 'val_class_loss'
+            'monitor': 'val_task_loss'
         }
         return [optimizer], [scheduler]

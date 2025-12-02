@@ -97,7 +97,7 @@ def main():
         sample_emb_dim=ds.embeddings.shape[1],
         habitat_dim=ds.habitats.shape[1],
         num_classes=args.num_classes,
-        lambda_domain=args.lambda_domain
+        lambda_domain=args.lambda_domain,
         strict=False,
     )
     model.to(args.device)

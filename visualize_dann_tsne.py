@@ -98,7 +98,7 @@ def main():
         habitat_dim=ds.habitats.shape[1],
         num_classes=args.num_classes,
         lambda_domain=args.lambda_domain
-        strict=False
+        strict=False,
     )
     model.to(args.device)
 

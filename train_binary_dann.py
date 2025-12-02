@@ -115,24 +115,36 @@ def main():
             lambda_domain=lambda_domain
         )
 
-        # Callback e logger
-        checkpoint_callback = ModelCheckpoint(
-            monitor='val_loss_total',
-            dirpath='checkpoints_binary_dann',
-            filename=f"binary-dann-{split_file.stem}" + "-{val_acc:.2f}",
-            save_top_k=3,
-            mode='min',
-        )
-        early_stopping_callback = EarlyStopping(
-            monitor='val_loss_total',
-            patience=3,
-            mode='min'
-        )
+        # Logger W&B
         wandb_logger = WandbLogger(
             project='ORDNA_Binary_DANN',
             save_dir='lightning_logs',
             config=args,
             log_model=False
+        )
+
+        # Nome della run WandB
+        run_name = wandb_logger.experiment.name  # es: "cool-sun-42"
+
+        # Cartella dedicata per i checkpoint di questa run
+        ckpt_dir = Path("checkpoints_binary_dann") / run_name
+        ckpt_dir.mkdir(parents=True, exist_ok=True)
+
+        # Salviamo SOLO il best checkpoint (come nel DANN multiclass)
+        checkpoint_callback = ModelCheckpoint(
+            monitor='val_total_loss',          # <- nome coerente col modello
+            dirpath=str(ckpt_dir),
+            filename=f"{split_file.stem}-best",
+            save_top_k=1,
+            save_last=False,
+            mode='min',
+        )
+
+        # Early stopping: monitoriamo la stessa metrica
+        early_stopping_callback = EarlyStopping(
+            monitor='val_total_loss',
+            patience=10,
+            mode='min'
         )
 
         # Trainer
@@ -151,9 +163,11 @@ def main():
 
         # ------------------ Salvataggio predizioni su VAL ------------------
         model.eval()
-        preds_list = []
-        true_labels = []
-        prob_list = []
+        preds_list    = []
+        true_labels   = []
+        prob_list     = []
+        dom_true_list = []
+        dom_pred_list = []
 
         val_codes_list = [dataset_full.codes[i] for i in val_indices]
 
@@ -162,25 +176,47 @@ def main():
                 emb   = emb.to(model.device)
                 hab   = hab.to(model.device)
                 label = label.to(model.device)
+                dom   = dom.to(model.device)
 
                 x = torch.cat((emb, hab), dim=1)
-                logit = model(x)  # forward → logit binario
-                prob = torch.sigmoid(logit).detach().cpu().numpy()
+
+                # logit binario (task)
+                logit = model(x)  # forward → logit binario [B]
+                prob  = torch.sigmoid(logit).detach().cpu().numpy()
                 preds = (prob > 0.5).astype(int)
+
+                # dominio (usiamo encoder + domain_head)
+                z = model.encoder(x)
+                logits_dom = model.domain_head(z)
+                dom_pred = torch.argmax(logits_dom, dim=1).detach().cpu().numpy()
 
                 preds_list.extend(preds.tolist())
                 true_labels.extend(label.cpu().numpy().tolist())
                 prob_list.extend(prob.tolist())
+                dom_true_list.extend(dom.cpu().numpy().tolist())
+                dom_pred_list.extend(dom_pred.tolist())
 
         residuals = [p - t for p, t in zip(preds_list, true_labels)]
+        dom_correct = [int(t == p) for t, p in zip(dom_true_list, dom_pred_list)]
+
+        if len(dom_correct) > 0:
+            domain_accuracy = sum(dom_correct) / len(dom_correct)
+        else:
+            domain_accuracy = float('nan')
+
+        print(f"  → Domain accuracy (val set) for fold {split_file.name}: {domain_accuracy:.4f}")
 
         out_df = pd.DataFrame({
-            'spygen_code': val_codes_list,
-            'label':       true_labels,
-            'prediction':  preds_list,
-            'residual':    residuals,
-            'prob_pos':    prob_list
+            'spygen_code':   val_codes_list,
+            'label':         true_labels,
+            'prediction':    preds_list,
+            'residual':      residuals,
+            'prob_pos':      prob_list,
+            'domain_true':   dom_true_list,
+            'domain_pred':   dom_pred_list,
+            'domain_correct':dom_correct
         })
+
         csv_out = output_dir / f"predictions_dann_{split_file.stem}.csv"
         out_df.to_csv(csv_out, index=False)
         print(f"Saved predictions CSV: {csv_out}")

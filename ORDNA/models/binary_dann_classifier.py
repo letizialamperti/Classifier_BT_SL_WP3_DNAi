@@ -97,12 +97,13 @@ class BinaryDANNClassifier(pl.LightningModule):
             self.loss_fn = nn.BCEWithLogitsLoss()
 
         # Metriche per il TASK (binary)
-        self.train_accuracy = Accuracy(task="binary")
-        self.val_accuracy   = Accuracy(task="binary")
+        self.train_accuracy  = Accuracy(task="binary")
+        self.val_accuracy    = Accuracy(task="binary")
         self.train_precision = Precision(task="binary")
         self.val_precision   = Precision(task="binary")
         self.train_recall    = Recall(task="binary")
         self.val_recall      = Recall(task="binary")
+
         self.train_mae = MeanAbsoluteError()
         self.val_mae   = MeanAbsoluteError()
         self.train_mse = MeanSquaredError()
@@ -145,8 +146,8 @@ class BinaryDANNClassifier(pl.LightningModule):
         logits_domain = self.domain_head(z_rev)     # [B, num_domains]
         loss_domain = F.cross_entropy(logits_domain, domains.long())
 
-        # Loss totale
-        loss = loss_task + self.lambda_domain * loss_domain
+        # Loss totale (stessa struttura del multiclass DANN)
+        loss = loss_task + loss_domain
 
         # Metriche task
         acc  = self.train_accuracy(preds, labels)
@@ -160,9 +161,9 @@ class BinaryDANNClassifier(pl.LightningModule):
         acc_dom  = self.train_domain_acc(pred_dom, domains)
 
         self.log_dict({
-            'train_loss_total':  loss,
-            'train_loss_task':   loss_task,
-            'train_loss_domain': loss_domain,
+            'train_total_loss':  loss,
+            'train_task_loss':   loss_task,
+            'train_domain_loss': loss_domain,
             'train_acc':         acc,
             'train_prec':        prec,
             'train_rec':         rec,
@@ -196,7 +197,7 @@ class BinaryDANNClassifier(pl.LightningModule):
         logits_domain = self.domain_head(z_rev)
         loss_domain = F.cross_entropy(logits_domain, domains.long())
 
-        loss = loss_task + self.lambda_domain * loss_domain
+        loss = loss_task + loss_domain
 
         # Accumulo per visualizzazioni finali
         self.validation_logits.append(logits_task.detach().cpu())
@@ -214,9 +215,9 @@ class BinaryDANNClassifier(pl.LightningModule):
         acc_dom  = self.val_domain_acc(pred_dom, domains)
 
         self.log_dict({
-            'val_loss_total':  loss,
-            'val_loss_task':   loss_task,
-            'val_loss_domain': loss_domain,
+            'val_total_loss':  loss,
+            'val_task_loss':   loss_task,
+            'val_domain_loss': loss_domain,
             'val_acc':         acc,
             'val_prec':        prec,
             'val_rec':         rec,
@@ -270,6 +271,6 @@ class BinaryDANNClassifier(pl.LightningModule):
             'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, mode='min', factor=0.1, patience=5, verbose=True
             ),
-            'monitor': 'val_loss_total'
+            'monitor': 'val_class_loss'
         }
         return [optimizer], [scheduler]

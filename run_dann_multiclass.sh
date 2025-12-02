@@ -21,7 +21,7 @@ cd ~/Classifier_BT_SL_WP3_DNAi
 # Percorsi ai dati GLOBALI (460 campioni, tutti gli habitat)
 EMBEDDINGS_FILE="BT_output/train/embedding_coords_460_all_data_.csv"
 PROTECTION_FILE="label/labels_5_levels.csv"
-HABITAT_FILE="habitat/label_habitat_460.csv"
+HABITAT_FILE="habitat/label_habitat_macro_460.csv"
 
 echo "Starting DANN CORAL cross-validation over 5 folds on ALL 460 samples…"
 
@@ -47,7 +47,7 @@ for fold in {1..5}; do
     --batch_size 10 \
     --initial_learning_rate 1e-3 \
     --max_epochs 100 \
-    --lambda_domain 0.8 \
+    --lambda_domain 0 \
     --accelerator gpu
 
   # train_dann_cv.py dovrebbe salvare:

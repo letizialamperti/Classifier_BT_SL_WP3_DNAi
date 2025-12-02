@@ -21,19 +21,19 @@ conda activate zioboia
 #       INPUT FILES
 # ==========================
 EMBEDDINGS="BT_output/train/embedding_coords_460_all_data_.csv"
-PROTECTION="label/general_labels_numeric_binary.csv"
-HABITAT="habitat/label_habitat_460.csv"
+PROTECTION="label/labels_5_levels.csv"
+HABITAT="habitat/label_habitat_macro_460.csv"
 
 # === Choose the checkpoint you want to visualize ===
-CHECKPOINT="checkpoints_binary_dann_classifier/lambda_4_0/split_5_fold_01-best.ckpt"
+CHECKPOINT="checkpoints_dann_classifier/lambda_0_0/split_5_fold_03-best.ckpt"
 
 # ==========================
 #      t-SNE ARGUMENTS
 # ==========================
-NUM_CLASSES=2 #binary
+NUM_CLASSES=5 #multiclass
 BATCH_SIZE=64
 PERPLEXITY=30
-LAMBDA_DOMAIN=4
+LAMBDA_DOMAIN=0
 
 echo "Running t-SNE visualization for checkpoint: $CHECKPOINT"
 

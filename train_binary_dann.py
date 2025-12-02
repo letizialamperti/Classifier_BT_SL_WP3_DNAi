@@ -115,29 +115,29 @@ def main():
             lambda_domain=lambda_domain
         )
 
-        # Logger W&B
+         # Logger W&B
         wandb_logger = WandbLogger(
-            project='ORDNA_Binary_DANN',
+            project='ORDNA_DANN',
             save_dir='lightning_logs',
             config=args,
             log_model=False
         )
 
-        # Nome della run WandB
-        run_name = wandb_logger.experiment.name  # es: "cool-sun-42"
+        # Stringa "file-safe" per lambda, es: 1.0 -> "1_0"
+        lambda_str = str(lambda_domain).replace('.', '_')
 
-        # Cartella dedicata per i checkpoint di questa run
-        ckpt_dir = Path("checkpoints_binary_dann") / run_name
+        # Cartella dedicata per questo valore di lambda (UNICA per tutti i fold)
+        ckpt_dir = Path("checkpoints_dann_classifier") / f"lambda_{lambda_str}"
         ckpt_dir.mkdir(parents=True, exist_ok=True)
 
-        # Salviamo SOLO il best checkpoint (come nel DANN multiclass)
+        # Salviamo SOLO il best checkpoint per questo fold
         checkpoint_callback = ModelCheckpoint(
-            monitor='val_total_loss',          # <- nome coerente col modello
+            monitor='val_class_loss',
             dirpath=str(ckpt_dir),
-            filename=f"{split_file.stem}-best",
+            filename=f"{split_file.stem}-best",  # es: fold1-best.ckpt
             save_top_k=1,
             save_last=False,
-            mode='min',
+            mode='min'
         )
 
         # Early stopping: monitoriamo la stessa metrica
@@ -217,9 +217,20 @@ def main():
             'domain_correct':dom_correct
         })
 
-        csv_out = output_dir / f"predictions_dann_{split_file.stem}.csv"
+        # ---- SALVATAGGIO CSV METRICHE PER FOLD ----
+        
+        # stringa "file-safe" per lambda, es: 1.0 -> "1_0"
+        lambda_str = str(lambda_domain).replace('.', '_')
+        
+        # cartella dedicata per questo valore di lambda
+        lambda_metrics_dir = output_dir / f"lambda_{lambda_str}"
+        lambda_metrics_dir.mkdir(parents=True, exist_ok=True)
+        
+        # nome del file CSV (es: dann_metrics_split1.csv)
+        csv_out = lambda_metrics_dir / f"dann_metrics_{split_file.stem}.csv"
+        
         out_df.to_csv(csv_out, index=False)
-        print(f"Saved predictions CSV: {csv_out}")
+        print(f"Saved DANN metrics CSV: {csv_out}")
 
 
 if __name__ == '__main__':

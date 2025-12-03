@@ -48,7 +48,7 @@ for fold in {1..5}; do
     --protection_file "$PROTECTION_FILE" \
     --habitat_file "$HABITAT_FILE" \
     --k_cross_file "$K_CROSS_FILE" \
-    --batch_size 10 \
+    --batch_size 30 \
     --initial_learning_rate 1e-3 \
     --max_epochs 100 \
     --lambda_domain "$LAMBDA_DOMAIN" \

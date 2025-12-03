@@ -119,8 +119,10 @@ class DANNClassifier(pl.LightningModule):
     # ================================================================
     def forward(self, x):
         z = self.encoder(x)
-        pred = self.task_head(z).squeeze(-1)  # [B]
+        raw = self.task_head(z).squeeze(-1)              # ℝ
+        pred = (self.num_classes - 1) * torch.sigmoid(raw)  # ∈ [0, num_classes-1]  
         return pred
+
 
 
     # ================================================================
@@ -137,12 +139,16 @@ class DANNClassifier(pl.LightningModule):
 
         # ----- Task -----
         z = self.encoder(x)
-        pred_task = self.task_head(z).squeeze(-1)  # [B]
-
+        
+        raw = self.task_head(z).squeeze(-1)                     # ℝ
+        pred_task = (self.num_classes - 1) * torch.sigmoid(raw) # [0, K-1]
+        
         loss_task = self.loss_fn(pred_task, labels)
-
+        
         # Converto il valore continuo in label discreta per metriche
         pred_labels = regression_to_label(pred_task, self.num_classes)
+        pred_task = self.task_head(z).squeeze(-1)  # [B]
+
 
         # ----- Domain -----
         z_rev = self.grl(z)
@@ -193,11 +199,11 @@ class DANNClassifier(pl.LightningModule):
 
         # ----- Task -----
         z = self.encoder(x)
-        pred_task = self.task_head(z).squeeze(-1)  # [B]
-
-        # vogliamo anche il vettore di errori assoluti
+        raw = self.task_head(z).squeeze(-1)
+        pred_task = (self.num_classes - 1) * torch.sigmoid(raw)
+        
         loss_task, raw_abs = self.loss_fn(pred_task, labels, return_raw=True)
-
+        
         pred_labels = regression_to_label(pred_task, self.num_classes)
 
         # ----- Domain -----

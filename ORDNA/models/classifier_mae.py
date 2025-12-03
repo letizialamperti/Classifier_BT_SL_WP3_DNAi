@@ -46,27 +46,33 @@ class AbsoluteErrorLoss(nn.Module):
         if pred.dim() == 2 and pred.size(1) == 1:
             pred = pred.squeeze(1)
 
-        labels_long = labels.long()
+        labels_long  = labels.long()
         labels_float = labels.float()
 
-        abs_err = torch.abs(pred - labels_float)  # [B]
+        # errore
+        diff    = pred - labels_float           # [B]
+        abs_err = torch.abs(diff)               # |pred - label|
+        sq_err  = diff ** 2                     # (pred - label)^2
+
+        # loss base per-sample: |e| + e^2
+        per_sample_loss = abs_err + sq_err      # [B]
 
         # --- pesatura per classe ---
         if self.class_weights is not None:
-            # weights per esempio = 1/freq
-            sample_weights = self.class_weights[labels_long]  # [B]
-            abs_err = abs_err * sample_weights
+            sample_weights = self.class_weights[labels_long]   # [B]
+            per_sample_loss = per_sample_loss * sample_weights
 
+        # riduzione
         if self.reduction == "mean":
-            loss = abs_err.mean()
+            loss = per_sample_loss.mean()
         elif self.reduction == "sum":
-            loss = abs_err.sum()
+            loss = per_sample_loss.sum()
         else:  # "none"
-            loss = abs_err
+            loss = per_sample_loss
 
         if return_raw:
-            # ritorniamo il vettore di errori pesati (per istogrammi ecc.)
-            return loss, abs_err
+            # ritorniamo il vettore di loss per-sample (già pesato)
+            return loss, per_sample_loss
 
         return loss
 

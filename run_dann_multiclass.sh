@@ -26,7 +26,7 @@ HABITAT_FILE="habitat/label_habitat_macro_460.csv"
 echo "Starting DANN CORAL cross-validation over 5 folds on ALL 460 samples…"
 
 # Valore di lambda da usare (deve essere lo stesso che passi a train_dann_cv.py)
-LAMBDA_DOMAIN=4
+LAMBDA_DOMAIN=0
 
 # Stringa "file-safe" per lambda: 1.0 -> 1_0, 0.5 -> 0_5, ecc.
 LAMBDA_STR="${LAMBDA_DOMAIN/./_}"

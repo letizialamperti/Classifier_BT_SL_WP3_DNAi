@@ -145,7 +145,7 @@ class DANNClassifier(pl.LightningModule):
         loss_domain = F.cross_entropy(logits_domain, domains.long())
 
         # ----- Total -----
-        loss = loss_task + lambda_domain*loss_domain
+        loss = loss_task + self.lambda_domain * loss_domain
 
         # Task metrics
         acc  = self.train_accuracy(pred_labels, labels)
@@ -198,7 +198,7 @@ class DANNClassifier(pl.LightningModule):
         logits_domain = self.domain_head(z_rev)
         loss_domain = F.cross_entropy(logits_domain, domains.long())
 
-        loss = loss_task + lambda_domain*loss_domain
+        loss = loss_task + self.lambda_domain * loss_domain
 
         # Task metrics
         acc  = self.val_accuracy(pred_labels, labels)

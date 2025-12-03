@@ -25,8 +25,15 @@ HABITAT_FILE="habitat/label_habitat_macro_460.csv"
 
 echo "Starting DANN CORAL cross-validation over 5 folds on ALL 460 samples…"
 
-# Cartella metriche DANN
-METRICS_DIR="metrics_dann"
+# Valore di lambda da usare (deve essere lo stesso che passi a train_dann_cv.py)
+LAMBDA_DOMAIN=0
+
+# Stringa "file-safe" per lambda: 1.0 -> 1_0, 0.5 -> 0_5, ecc.
+LAMBDA_STR="${LAMBDA_DOMAIN/./_}"
+
+# Cartella metriche DANN per questo lambda
+METRICS_ROOT_DIR="metrics_dann"
+METRICS_DIR="${METRICS_ROOT_DIR}/lambda_${LAMBDA_STR}"
 mkdir -p "$METRICS_DIR"
 
 for fold in {1..5}; do
@@ -34,7 +41,7 @@ for fold in {1..5}; do
   K_CROSS_FILE="k_cross/split_5_fold_${fold_padded}.csv"
 
   echo
-  echo "=== Fold $fold_padded: using split $K_CROSS_FILE ==="
+  echo "=== Fold $fold_padded: using split $K_CROSS_FILE (lambda = ${LAMBDA_DOMAIN}) ==="
   echo
 
   python train_dann_cv.py \
@@ -47,11 +54,11 @@ for fold in {1..5}; do
     --batch_size 10 \
     --initial_learning_rate 1e-3 \
     --max_epochs 100 \
-    --lambda_domain 0 \
+    --lambda_domain "$LAMBDA_DOMAIN" \
     --accelerator gpu
 
-  # train_dann_cv.py ora deve salvare anche:
-  #   metrics_dann/dann_metrics_split_5_fold_XX.csv
+  # train_dann_cv.py deve salvare:
+  #   metrics_dann/lambda_<LAMBDA_STR>/dann_metrics_split_5_fold_XX.csv
   METRICS_IN="${METRICS_DIR}/dann_metrics_split_5_fold_${fold_padded}.csv"
   METRICS_OUT="${METRICS_DIR}/dann_metrics_460_fold_${fold_padded}.csv"
 

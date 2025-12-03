@@ -78,7 +78,7 @@ class DANNClassifier(pl.LightningModule):
         self.task_head = nn.Linear(128, num_classes - 1)   # CORAL logits
 
         # ---------------- Domain head ----------------
-        self.grl = GradReverse(lambd=lambda_domain)
+        self.grl = GradReverse(lambd=1.0)
         self.domain_head = nn.Sequential(
             nn.Linear(128, 64),
             nn.ReLU(),
@@ -145,7 +145,7 @@ class DANNClassifier(pl.LightningModule):
         loss_domain = F.cross_entropy(logits_domain, domains.long())
 
         # ----- Total -----
-        loss = loss_task + loss_domain
+        loss = loss_task + lambda_domain*loss_domain
 
         # Task metrics
         acc  = self.train_accuracy(pred_labels, labels)
@@ -198,7 +198,7 @@ class DANNClassifier(pl.LightningModule):
         logits_domain = self.domain_head(z_rev)
         loss_domain = F.cross_entropy(logits_domain, domains.long())
 
-        loss = loss_task + loss_domain
+        loss = loss_task + lambda_domain*loss_domain
 
         # Task metrics
         acc  = self.val_accuracy(pred_labels, labels)

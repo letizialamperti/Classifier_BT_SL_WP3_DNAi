@@ -64,12 +64,10 @@ def main():
             habitat_file=str(habitat_file)
         )
         sample_emb_dim = dataset_full.embeddings.shape[1]
-        habitat_dim    = dataset_full.habitats.shape[1]
         num_domains    = dataset_full.num_domains
 
         print(f"  → samples:     {len(dataset_full)}")
         print(f"  → emb_dim:     {sample_emb_dim}")
-        print(f"  → habitat_dim: {habitat_dim}")
         print(f"  → num_domains: {num_domains}")
 
         # Carica split
@@ -105,17 +103,16 @@ def main():
         pos_weight = calculate_pos_weight_from_csv(protection_file)
         print(f"DEBUG - Positive class weight: {pos_weight.item():.4f}")
 
-        # Inizializzazione modello DANN binario
+        # Inizializzazione modello DANN binario (nuova firma: niente habitat_dim)
         model = BinaryDANNClassifier(
             sample_emb_dim=sample_emb_dim,
-            habitat_dim=habitat_dim,
             num_domains=num_domains,
             initial_learning_rate=args.initial_learning_rate,
             pos_weight=pos_weight,
             lambda_domain=lambda_domain
         )
 
-         # Logger W&B
+        # Logger W&B
         wandb_logger = WandbLogger(
             project='ORDNA_DANN',
             save_dir='lightning_logs',
@@ -172,13 +169,12 @@ def main():
         val_codes_list = [dataset_full.codes[i] for i in val_indices]
 
         with torch.no_grad():
-            for emb, hab, label, dom in val_loader:
+            for emb, label, dom in val_loader:   # <-- ora dataset = (emb, label, dom)
                 emb   = emb.to(model.device)
-                hab   = hab.to(model.device)
                 label = label.to(model.device)
                 dom   = dom.to(model.device)
 
-                x = torch.cat((emb, hab), dim=1)
+                x = emb
 
                 # logit binario (task)
                 logit = model(x)  # forward → logit binario [B]
@@ -218,17 +214,11 @@ def main():
         })
 
         # ---- SALVATAGGIO CSV METRICHE PER FOLD ----
-        
-        # stringa "file-safe" per lambda, es: 1.0 -> "1_0"
         lambda_str = str(lambda_domain).replace('.', '_')
-        
-        # cartella dedicata per questo valore di lambda
         lambda_metrics_dir = output_dir / f"lambda_{lambda_str}"
         lambda_metrics_dir.mkdir(parents=True, exist_ok=True)
-        
-        # nome del file CSV (es: dann_metrics_split1.csv)
+
         csv_out = lambda_metrics_dir / f"dann_metrics_{split_file.stem}.csv"
-        
         out_df.to_csv(csv_out, index=False)
         print(f"Saved DANN metrics CSV: {csv_out}")
 

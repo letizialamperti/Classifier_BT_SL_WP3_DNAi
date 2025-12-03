@@ -226,20 +226,15 @@ def main():
 
         lambda_str = str(lambda_domain).replace('.', '_')
         
-        # 1) cartella specifica per questo valore di lambda
+        # cartella dedicata per questo valore di lambda
         lambda_metrics_dir = output_dir / f"lambda_{lambda_str}"
         lambda_metrics_dir.mkdir(parents=True, exist_ok=True)
         
-        csv_out_lambda = lambda_metrics_dir / f"dann_metrics_{split_file.stem}.csv"
-        out_df.to_csv(csv_out_lambda, index=False)
+        csv_out = lambda_metrics_dir / f"dann_metrics_{split_file.stem}.csv"
+        out_df.to_csv(csv_out, index=False)
         
-        # 2) copia "flat" compatibile con lo script .sh
-        #    (es: metrics_dann/dann_metrics_split_5_fold_01.csv)
-        csv_out_flat = output_dir / f"dann_metrics_{split_file.stem}.csv"
-        out_df.to_csv(csv_out_flat, index=False)
-        
-        print(f"Saved DANN metrics CSV (lambda-specific): {csv_out_lambda}")
-        print(f"Saved DANN metrics CSV (flat for bash):   {csv_out_flat}")
+        print(f"Saved DANN metrics CSV: {csv_out}")
+
 
 
 

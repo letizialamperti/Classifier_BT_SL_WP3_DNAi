@@ -27,7 +27,7 @@ def extract_latent(model, loader, device):
             emb = emb.to(device)
             hab = hab.to(device)
 
-            z = model.encoder(torch.cat((emb, hab), dim=1))  # → Z
+            z = model.encoder(emb)
 
             all_z.append(z.cpu())
             all_y.append(y)
@@ -98,7 +98,6 @@ def main():
         habitat_dim=ds.habitats.shape[1],
         num_classes=args.num_classes,
         lambda_domain=args.lambda_domain,
-        strict=False,
     )
     model.to(args.device)
 

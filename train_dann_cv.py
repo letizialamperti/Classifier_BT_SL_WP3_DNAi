@@ -71,21 +71,19 @@ def main():
             habitat_file=str(habitat_file)
         )
         sample_emb_dim = dataset_full.embeddings.shape[1]
-        habitat_dim    = dataset_full.habitats.shape[1]
 
         print(f"  → samples:      {len(dataset_full)}")
         print(f"  → emb_dim:      {sample_emb_dim}")
-        print(f"  → habitat_dim:  {habitat_dim}")
         print(f"  → num_domains:  {dataset_full.num_domains}")
 
         # Carica split (train / validation) da CSV
         kdf = pd.read_csv(split_file, dtype=str)
-        train_codes = kdf.loc[kdf['set'] == 'train',      'spygen_code'].tolist()
-        val_codes   = kdf.loc[kdf['set'] != 'train',      'spygen_code'].tolist()
+        train_codes = kdf.loc[kdf['set'] == 'train', 'spygen_code'].tolist()
+        val_codes   = kdf.loc[kdf['set'] != 'train', 'spygen_code'].tolist()
 
         # Indici nel dataset_full
         code_to_idx = {code: i for i, code in enumerate(dataset_full.codes)}
-        train_indices = train_indices = [code_to_idx[c] for c in train_codes if c in code_to_idx]
+        train_indices = [code_to_idx[c] for c in train_codes if c in code_to_idx]
         val_indices   = [code_to_idx[c] for c in val_codes   if c in code_to_idx]
 
         print(f"  → train size: {len(train_indices)}")
@@ -118,10 +116,9 @@ def main():
         # λ per la loss di dominio (se non definito negli args, usa 1.0)
         lambda_domain = getattr(args, "lambda_domain", 1.0)
 
-        # Modello DANN
+        # Modello DANN (nuova firma: niente habitat_dim)
         model = DANNClassifier(
             sample_emb_dim=sample_emb_dim,
-            habitat_dim=habitat_dim,
             num_classes=args.num_classes,
             num_domains=dataset_full.num_domains,
             initial_learning_rate=args.initial_learning_rate,
@@ -170,29 +167,27 @@ def main():
             log_every_n_steps=10
         )
 
-
         print("Starting DANN training...")
         trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
         print(f"DEBUG - Early stopping triggered: {trainer.should_stop}")
 
         # ------------------ PREDIZIONI SU VAL E METRIC CSV -------------------
         model.eval()
-        preds_list        = []
-        true_labels       = []
-        dom_true_list     = []
-        dom_pred_list     = []
+        preds_list    = []
+        true_labels   = []
+        dom_true_list = []
+        dom_pred_list = []
 
         # ordiniamo i codici val in base a val_indices (stesso ordine del DataLoader con shuffle=False)
         val_codes_list = [dataset_full.codes[i] for i in val_indices]
 
         with torch.no_grad():
-            for emb, hab, lab, dom in val_loader:
+            for emb, lab, dom in val_loader:   # <-- ora il dataset restituisce (emb, label, dom)
                 emb = emb.to(model.device)
-                hab = hab.to(model.device)
                 lab = lab.to(model.device)
                 dom = dom.to(model.device)
 
-                x      = torch.cat((emb, hab), dim=1)
+                x = emb
 
                 # logits task (CORAL)
                 logits_task = model(x)
@@ -228,20 +223,13 @@ def main():
         })
 
         # ---- SALVATAGGIO CSV METRICHE PER FOLD ----
-        
-        # stringa "file-safe" per lambda, es: 1.0 -> "1_0"
         lambda_str = str(lambda_domain).replace('.', '_')
-        
-        # cartella dedicata per questo valore di lambda
         lambda_metrics_dir = output_dir / f"lambda_{lambda_str}"
         lambda_metrics_dir.mkdir(parents=True, exist_ok=True)
-        
-        # nome del file CSV (es: dann_metrics_split1.csv)
+
         csv_out = lambda_metrics_dir / f"dann_metrics_{split_file.stem}.csv"
-        
         out_df.to_csv(csv_out, index=False)
         print(f"Saved DANN metrics CSV: {csv_out}")
-
 
     print("All DANN folds done!")
 

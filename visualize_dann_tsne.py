@@ -23,9 +23,8 @@ def extract_latent(model, loader, device):
     all_d = []
 
     with torch.no_grad():
-        for emb, hab, y, d in loader:
+        for emb, y, d in loader:
             emb = emb.to(device)
-            hab = hab.to(device)
 
             z = model.encoder(emb)
 

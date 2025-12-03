@@ -1,6 +1,5 @@
 import argparse
 import torch
-import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 import pandas as pd
 import seaborn as sns
@@ -23,7 +22,7 @@ def extract_latent(model, loader, device):
     all_d = []
 
     with torch.no_grad():
-        for emb, y, d in loader:
+        for emb, y, d in loader:   
             emb = emb.to(device)
 
             z = model.encoder(emb)
@@ -37,31 +36,6 @@ def extract_latent(model, loader, device):
     D = torch.cat(all_d).numpy()
 
     return Z, Y, D
-
-
-def plot_tsne(Z_2d, labels, title, wandb_name):
-    """
-    Plotta e manda il grafico a wandb.
-    """
-    df = pd.DataFrame({
-        "x": Z_2d[:, 0],
-        "y": Z_2d[:, 1],
-        "label": labels
-    })
-
-    plt.figure(figsize=(8, 6))
-    sns.scatterplot(
-        data=df,
-        x="x", y="y",
-        hue="label",
-        palette="tab10",
-        s=60, alpha=0.8
-    )
-    plt.title(title)
-    plt.legend(title="label", bbox_to_anchor=(1.05, 1), loc='upper left')
-
-    wandb.log({wandb_name: wandb.Image(plt)})
-    plt.close()
 
 
 def main():
@@ -94,8 +68,8 @@ def main():
     model = DANNClassifier.load_from_checkpoint(
         args.checkpoint,
         sample_emb_dim=ds.embeddings.shape[1],
-        habitat_dim=ds.habitats.shape[1],
         num_classes=args.num_classes,
+        num_domains=ds.num_domains,
         lambda_domain=args.lambda_domain,
     )
     model.to(args.device)
@@ -104,7 +78,13 @@ def main():
     Z, Y, D = extract_latent(model, loader, args.device)
 
     # === t-SNE ===
-    tsne = TSNE(n_components=2, perplexity=args.perplexity, learning_rate="auto", init="random", random_state=42)
+    tsne = TSNE(
+        n_components=2,
+        perplexity=args.perplexity,
+        learning_rate="auto",
+        init="random",
+        random_state=42
+    )
     Z_2d = tsne.fit_transform(Z)
 
     # === Plot protection ===
@@ -124,7 +104,3 @@ def main():
     )
 
     print("t-SNE finished and uploaded to WandB!")
-
-
-if __name__ == "__main__":
-    main()

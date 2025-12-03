@@ -25,7 +25,7 @@ PROTECTION="label/labels_5_levels.csv"
 HABITAT="habitat/label_habitat_macro_460.csv"
 
 # === Choose the checkpoint you want to visualize ===
-CHECKPOINT="checkpoints_dann_classifier/lambda_0_5/split_5_fold_03-best-v12.ckpt"
+CHECKPOINT="checkpoints_dann_classifier/lambda_0_5/split_5_fold_03-best.ckpt"
 
 # ==========================
 #      t-SNE ARGUMENTS

@@ -32,20 +32,43 @@ def extract_latent(model, loader, device):
 
 
 def plot_tsne(Z_2d, labels, title, wandb_name):
+    """
+    Plotta e manda il grafico a W&B con legenda non tagliata.
+    """
+
     df = pd.DataFrame({
         "x": Z_2d[:, 0],
         "y": Z_2d[:, 1],
-        "label": labels
+        "label": labels,
     })
 
-    plt.figure(figsize=(8, 6))
-    sns.scatterplot(
-        data=df, x="x", y="y",
-        hue="label", palette="tab10",
-        s=60, alpha=0.8
+    # Figura più larga e margini aggiustati
+    plt.figure(figsize=(10, 7))
+    
+    # Usare uno scatter compatibile con molte classi
+    ax = sns.scatterplot(
+        data=df,
+        x="x", y="y",
+        hue="label",
+        palette="tab10",
+        s=55,
+        alpha=0.8,
+        edgecolor=None,
     )
-    plt.title(title)
-    plt.legend(title="label", bbox_to_anchor=(1.05, 1), loc="upper left")
+
+    plt.title(title, fontsize=14)
+
+    # Legenda dentro la figura, non tagliata
+    plt.legend(
+        title="Label",
+        bbox_to_anchor=(1.03, 1),
+        loc="upper left",
+        fontsize=9,
+        borderaxespad=0
+    )
+
+    # Lascia spazio a destra per la legenda
+    plt.tight_layout(rect=[0, 0, 0.82, 1])
 
     wandb.log({wandb_name: wandb.Image(plt)})
     plt.close()

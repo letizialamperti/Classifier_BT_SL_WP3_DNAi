@@ -72,7 +72,6 @@ class MergedDatasetDANN(Dataset):
 
     def __getitem__(self, idx):
         emb   = torch.tensor(self.embeddings[idx], dtype=torch.float)
-        hab   = torch.tensor(self.habitats[idx],   dtype=torch.float)
         label = torch.tensor(self.labels[idx],     dtype=torch.long)
         dom   = torch.tensor(self.domain_idx[idx], dtype=torch.long)
         return emb, hab, label, dom

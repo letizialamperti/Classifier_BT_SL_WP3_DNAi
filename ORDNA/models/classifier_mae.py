@@ -33,6 +33,12 @@ class AbsoluteErrorLoss(nn.Module):
 
         # Converti le labels a float per la sottrazione
         labels = labels.float()
+        print("pred:")
+        print(pred)
+        print("label:")
+        print(labels)
+        
+        
 
         abs_err = torch.abs(pred - labels)
 

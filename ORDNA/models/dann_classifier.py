@@ -49,7 +49,6 @@ class DANNClassifier(pl.LightningModule):
     def __init__(
         self,
         sample_emb_dim: int,
-        habitat_dim: int,
         num_classes: int,
         num_domains: int,
         initial_learning_rate: float = 1e-5,
@@ -63,7 +62,7 @@ class DANNClassifier(pl.LightningModule):
         self.num_domains   = num_domains
         self.lambda_domain = lambda_domain
 
-        input_dim = sample_emb_dim + habitat_dim
+        input_dim = sample_emb_dim 
 
         # ---------------- Encoder ----------------
         self.encoder = nn.Sequential(
@@ -126,13 +125,12 @@ class DANNClassifier(pl.LightningModule):
     # ================================================================
     def training_step(self, batch, batch_idx):
 
-        embeddings, habitats, labels, domains = batch
+        embeddings, labels, domains = batch
         embeddings = embeddings.to(self.device)
-        habitats   = habitats.to(self.device)
         labels     = labels.to(self.device)
         domains    = domains.to(self.device)
 
-        x = torch.cat((embeddings, habitats), dim=1)
+        x = embeddings
 
         # ----- Task -----
         z = self.encoder(x)
@@ -181,13 +179,12 @@ class DANNClassifier(pl.LightningModule):
     # ================================================================
     def validation_step(self, batch, batch_idx):
 
-        embeddings, habitats, labels, domains = batch
+        embeddings, labels, domains = batch
         embeddings = embeddings.to(self.device)
-        habitats   = habitats.to(self.device)
         labels     = labels.to(self.device)
         domains    = domains.to(self.device)
 
-        x = torch.cat((embeddings, habitats), dim=1)
+        x = embeddings
 
         # ----- Task -----
         z = self.encoder(x)

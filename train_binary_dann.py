@@ -214,13 +214,18 @@ def main():
         })
 
         # ---- SALVATAGGIO CSV METRICHE PER FOLD ----
+
         lambda_str = str(lambda_domain).replace('.', '_')
+        
+        # cartella dedicata per questo valore di lambda
         lambda_metrics_dir = output_dir / f"lambda_{lambda_str}"
         lambda_metrics_dir.mkdir(parents=True, exist_ok=True)
-
+        
         csv_out = lambda_metrics_dir / f"dann_metrics_{split_file.stem}.csv"
         out_df.to_csv(csv_out, index=False)
+        
         print(f"Saved DANN metrics CSV: {csv_out}")
+
 
 
 if __name__ == '__main__':

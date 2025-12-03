@@ -44,7 +44,7 @@ for fold in {1..5}; do
   echo "=== Fold $fold_padded: using split $K_CROSS_FILE (lambda = ${LAMBDA_DOMAIN}) ==="
   echo
 
-  python train_dann_cv.py \
+  python train_dann_multi_mae.py \
     --arg_log True \
     --embeddings_file "$EMBEDDINGS_FILE" \
     --protection_file "$PROTECTION_FILE" \

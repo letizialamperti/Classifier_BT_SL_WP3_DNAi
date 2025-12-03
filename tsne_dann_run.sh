@@ -31,7 +31,7 @@ CHECKPOINT="checkpoints_dann_classifier/lambda_0_5/split_5_fold_03-best.ckpt"
 #      t-SNE ARGUMENTS
 # ==========================
 NUM_CLASSES=5 #multiclass
-BATCH_SIZE=64
+BATCH_SIZE=128
 PERPLEXITY=30
 LAMBDA_DOMAIN=0.5
 

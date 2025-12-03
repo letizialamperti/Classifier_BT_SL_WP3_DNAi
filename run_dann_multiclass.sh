@@ -2,7 +2,7 @@
 set -e  # Termina lo script se si verifica un errore
 
 # ----------------------------------------
-# DIRETTIVE OAR (modifica a piacere)
+# DIRETTIVE OAR
 #OAR -n dann-460-job
 #OAR -l /nodes=1/gpu=1/core=12,walltime=24:00:00
 #OAR -p gpumodel='A100'
@@ -15,7 +15,7 @@ set -e  # Termina lo script se si verifica un errore
 source /applis/environments/conda.sh
 conda activate zioboia
 
-# Vai nella cartella del progetto (se serve)
+# Vai nella cartella del progetto
 cd ~/Classifier_BT_SL_WP3_DNAi
 
 # Percorsi ai dati GLOBALI (460 campioni, tutti gli habitat)
@@ -50,7 +50,7 @@ for fold in {1..5}; do
     --lambda_domain 0 \
     --accelerator gpu
 
-  # train_dann_cv.py dovrebbe salvare:
+  # train_dann_cv.py ora deve salvare anche:
   #   metrics_dann/dann_metrics_split_5_fold_XX.csv
   METRICS_IN="${METRICS_DIR}/dann_metrics_split_5_fold_${fold_padded}.csv"
   METRICS_OUT="${METRICS_DIR}/dann_metrics_460_fold_${fold_padded}.csv"

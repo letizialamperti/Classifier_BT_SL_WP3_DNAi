@@ -46,15 +46,16 @@ class BinaryDANNClassifier(pl.LightningModule):
 
     Input batch (da MergedDatasetDANN):
         embeddings : [B, sample_emb_dim]
-        habitats   : [B, habitat_dim] (one-hot o simile)
         labels     : [B] (0/1)
         domains    : [B] (indice habitat 0..num_domains-1)
+
+    L'habitat NON viene usato come feature di input,
+    ma solo come etichetta di dominio per il ramo avversario.
     """
 
     def __init__(
         self,
         sample_emb_dim: int,
-        habitat_dim: int,
         num_domains: int,
         initial_learning_rate: float = 1e-5,
         pos_weight: float | torch.Tensor | None = None,
@@ -65,7 +66,7 @@ class BinaryDANNClassifier(pl.LightningModule):
         self.num_domains   = num_domains
         self.lambda_domain = lambda_domain
 
-        input_dim = sample_emb_dim + habitat_dim
+        input_dim = sample_emb_dim  # solo embeddings
 
         # Encoder condiviso
         self.encoder = nn.Sequential(
@@ -125,13 +126,12 @@ class BinaryDANNClassifier(pl.LightningModule):
 
     # -------- training_step --------
     def training_step(self, batch, batch_idx):
-        embeddings, habitats, labels, domains = batch
+        embeddings, labels, domains = batch
         embeddings = embeddings.to(self.device)
-        habitats   = habitats.to(self.device)
         labels     = labels.to(self.device)
         domains    = domains.to(self.device)
 
-        x = torch.cat((embeddings, habitats), dim=1)  # [B, input_dim]
+        x = embeddings
         z = self.encoder(x)
 
         # Task: protezione binaria
@@ -146,7 +146,7 @@ class BinaryDANNClassifier(pl.LightningModule):
         logits_domain = self.domain_head(z_rev)     # [B, num_domains]
         loss_domain = F.cross_entropy(logits_domain, domains.long())
 
-        # Loss totale (stessa struttura del multiclass DANN)
+        # Loss totale
         loss = loss_task + loss_domain
 
         # Metriche task
@@ -176,13 +176,12 @@ class BinaryDANNClassifier(pl.LightningModule):
 
     # -------- validation_step --------
     def validation_step(self, batch, batch_idx):
-        embeddings, habitats, labels, domains = batch
+        embeddings, labels, domains = batch
         embeddings = embeddings.to(self.device)
-        habitats   = habitats.to(self.device)
         labels     = labels.to(self.device)
         domains    = domains.to(self.device)
 
-        x = torch.cat((embeddings, habitats), dim=1)
+        x = embeddings
         z = self.encoder(x)
 
         # Task

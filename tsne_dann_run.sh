@@ -47,6 +47,6 @@ python visualize_dann_tsne.py \
     --perplexity $PERPLEXITY \
     --lambda_domain $LAMBDA_DOMAIN \
     --device cuda \
-    --output_prefix "tsne_fold03_lambda05"
+
 
 echo "t-SNE visualization complete!"

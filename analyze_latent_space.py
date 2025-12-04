@@ -152,7 +152,30 @@ def plot_scatter(latent_2d, labels, title, cmap="viridis"):
 # ---------- Main ----------
 
 def main():
-    args = parse_args()
+
+    # ---------- PARSER  ----------
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--embeddings_file", type=str, required=True)
+    parser.add_argument("--protection_file", type=str, required=True)
+    parser.add_argument("--habitat_file", type=str, required=True)
+
+    # CSV con etichette categoriche per visualizzare l'habitat
+    parser.add_argument("--habitat_labels_file", type=str, default=None)
+
+    parser.add_argument("--checkpoint", type=str, required=True)
+    parser.add_argument("--num_classes", type=int, required=True)
+    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--max_points", type=int, default=2000)
+
+    # wandb
+    parser.add_argument("--wandb_project", type=str, default="LatentSpaceCORAL")
+    parser.add_argument("--wandb_entity", type=str, default=None)
+    parser.add_argument("--wandb_run_name", type=str, default="coral_latent_analysis")
+
+    args = parser.parse_args()
+    # -----------------------------------------------------------
+
+
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 

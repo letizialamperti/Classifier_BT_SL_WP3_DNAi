@@ -203,13 +203,9 @@ def main():
     # 3) Carica modello dal checkpoint
     model = Classifier.load_from_checkpoint(
         checkpoint_path=args.checkpoint,
-        sample_emb_dim=full_ds.embeddings.shape[1],
-        habitat_dim=full_ds.habitats.shape[1],
-        num_classes=args.num_classes,
-        initial_learning_rate=1e-5,   # non rilevante qui
-        pos_weights=None,
-        importance_weights=None,
+        strict=True  # oppure strict=False se stai sperimentando versioni leggermente diverse
     )
+
 
     # 4) Estrai spazio latente + etichette protezione
     latent, prot_labels = extract_latent_representations(

@@ -16,7 +16,7 @@ conda activate zioboia
 
 EMBEDDINGS_FILE="BT_output/train/embedding_coords_460_all_data_.csv"
 PROTECTION_FILE="label/general_labels_numeric_binary.csv"
-HABITAT_FILE="habitat/label_habitat_460.csv"
+HABITAT_FILE="habitat/empty_label_habitat_460.csv"
 
 echo "Starting habitat-aware binary classification CV over 5 folds…"
 

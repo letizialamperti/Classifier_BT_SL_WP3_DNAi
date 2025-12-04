@@ -18,33 +18,6 @@ from merged_dataset import MergedDataset
 from ORDNA.models.classifier_coralwheighted import Classifier
 
 
-# ---------- CLI ----------
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Analisi spazio latente del Classifier (PCA, t-SNE, PCoA) con logging su Weights & Biases."
-    )
-    parser.add_argument("--checkpoint", type=str, required=True,
-                        help="Path al checkpoint .ckpt del modello Lightning.")
-    parser.add_argument("--embeddings_file", type=str, required=True)
-    parser.add_argument("--protection_file", type=str, required=True)
-    parser.add_argument("--habitat_file", type=str, required=True)
-
-    parser.add_argument("--habitats_file", type=str, default=None,
-                        help="CSV con etichette di habitat (stesso numero di righe del dataset). Deve contenere una colonna 'habitat'.")
-    parser.add_argument("--num_classes", type=int, required=True)
-
-    parser.add_argument("--batch_size", type=int, default=128)
-    parser.add_argument("--max_points", type=int, default=2000,
-                        help="Numero massimo di punti da usare per t-SNE/PCoA (subsample se necessario).")
-    parser.add_argument("--wandb_project", type=str, default="latent_analysis",
-                        help="Nome del progetto Weights & Biases.")
-    parser.add_argument("--wandb_entity", type=str, default=None,
-                        help="Entity/utente/team Wandb (opzionale).")
-    parser.add_argument("--wandb_run_name", type=str, default="latent_coral_analysis")
-
-    return parser.parse_args()
-
 
 # ---------- Estrazione spazio latente ----------
 

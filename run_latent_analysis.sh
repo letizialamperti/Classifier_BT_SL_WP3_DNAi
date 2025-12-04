@@ -24,7 +24,7 @@ EMBEDDINGS="BT_output/train/embedding_coords_460_all_data_.csv"
 PROTECTION="label/labels_5_levels.csv"
 HABITAT="habitat/empty_label_habitat_460.csv"
 
-HABITAT_COL="habitat/label_habitat_macro_460.csv"
+HABITAT_COL="habitat/label_habitat_460.csv"
 
 
 # === Checkpoint da analizzare ===

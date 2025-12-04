@@ -30,8 +30,8 @@ def parse_args():
     parser.add_argument("--protection_file", type=str, required=True)
     parser.add_argument("--habitat_file", type=str, required=True)
 
-    parser.add_argument("--habitat_labels_file", type=str, default=None,
-                        help="CSV con etichette di habitat (stesso numero di righe del dataset). Deve contenere una colonna 'habitat_label'.")
+    parser.add_argument("--habitats_file", type=str, default=None,
+                        help="CSV con etichette di habitat (stesso numero di righe del dataset). Deve contenere una colonna 'habitat'.")
     parser.add_argument("--num_classes", type=int, required=True)
 
     parser.add_argument("--batch_size", type=int, default=128)
@@ -143,20 +143,20 @@ def pcoa_2d(latent):
 
 # ---------- Utils ----------
 
-def maybe_subsample(latent, prot_labels, habitat_labels, max_points, random_state=0):
+def maybe_subsample(latent, prot_labels, habitats, max_points, random_state=0):
     """
     Subsample casuale se i punti sono > max_points.
     Ritorna latent_sub, prot_sub, hab_sub.
     """
     n = latent.shape[0]
     if n <= max_points:
-        return latent, prot_labels, habitat_labels
+        return latent, prot_labels, habitats
 
     rng = np.random.default_rng(random_state)
     idx = rng.choice(n, size=max_points, replace=False)
     latent_sub = latent[idx]
     prot_sub = prot_labels[idx]
-    hab_sub = habitat_labels[idx]
+    hab_sub = habitats[idx]
     return latent_sub, prot_sub, hab_sub
 
 
@@ -219,21 +219,21 @@ def main():
     print(f"Numero di campioni nel dataset: {n_samples}")
 
     # 5) Etichette habitat categoriche (fattorizzate)
-    if args.habitat_labels_file is not None:
-        hab_df = pd.read_csv(args.habitat_labels_file)
+    if args.habitats_file is not None:
+        hab_df = pd.read_csv(args.habitats_file)
         if len(hab_df) != n_samples:
             raise ValueError(
-                f"habitat_labels_file ha {len(hab_df)} righe ma il dataset ha {n_samples} campioni."
+                f"habitats_file ha {len(hab_df)} righe ma il dataset ha {n_samples} campioni."
             )
-        if "habitat_label" not in hab_df.columns:
-            raise ValueError("habitat_labels_file deve contenere una colonna 'habitat_label'.")
-        hab_str = hab_df["habitat_label"].astype(str).values
+        if "habitat" not in hab_df.columns:
+            raise ValueError("habitats_file deve contenere una colonna 'habitat'.")
+        hab_str = hab_df["habitat"].astype(str).values
         hab_codes, hab_uniques = pd.factorize(hab_str)
         # Logghiamo la mappatura label -> codice
-        mapping_table = wandb.Table(columns=["habitat_label", "code"])
+        mapping_table = wandb.Table(columns=["habitat", "code"])
         for lbl, code in zip(hab_uniques, range(len(hab_uniques))):
             mapping_table.add_data(lbl, code)
-        wandb.log({"habitat_label_mapping": mapping_table})
+        wandb.log({"habitat_mapping": mapping_table})
     else:
         # fallback: fattorizza argmax sul vettore habitat del dataset
         # (ad esempio se full_ds.habitats è un one-hot o simile)

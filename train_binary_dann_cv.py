@@ -140,7 +140,7 @@ def main():
         # Early stopping: monitoriamo la stessa metrica
         early_stopping_callback = EarlyStopping(
             monitor='val_task_loss',
-            patience=10,
+            patience=20,
             mode='min'
         )
 

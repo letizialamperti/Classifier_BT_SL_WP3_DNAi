@@ -22,6 +22,7 @@ class GradReverseFn(Function):
 
     @staticmethod
     def backward(ctx, grad_output):
+        # gradiente invertito e scalato da lambd
         return -ctx.lambd * grad_output, None
 
 
@@ -38,19 +39,26 @@ class GradReverse(nn.Module):
         return grad_reverse(x, self.lambd)
 
 
-# ----------------- Binary DANN Classifier -----------------
+# ----------------- Binary DANN Classifier (allineato al primo modello) -----------------
 
 class BinaryDANNClassifier(pl.LightningModule):
     """
     Domain-adversarial binary classifier.
 
-    Input batch (da MergedDatasetDANN):
+    Vuole come input del batch:
         embeddings : [B, sample_emb_dim]
         labels     : [B] (0/1)
-        domains    : [B] (indice habitat 0..num_domains-1)
+        domains    : [B] (0..num_domains-1)
 
     L'habitat NON viene usato come feature di input,
     ma solo come etichetta di dominio per il ramo avversario.
+
+    NOTA IMPORTANTE:
+    - Il ramo task è reso il più simile possibile al primo modello:
+        embeddings -> Linear(sample_emb_dim, 256) -> BN -> ReLU -> Dropout -> Linear(256,1)
+    - Con lambda_domain = 0:
+        * il GRL non trasferisce gradiente al encoder
+        * il training sul task è (quasi) equivalente al primo modello con soli embedding.
     """
 
     def __init__(
@@ -64,27 +72,25 @@ class BinaryDANNClassifier(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.num_domains   = num_domains
-        self.lambda_domain = lambda_domain
+        self.lambda_domain = float(lambda_domain)
 
         input_dim = sample_emb_dim  # solo embeddings
 
-        # Encoder condiviso
+        # ---- Ramo TASK: architettura allineata al primo modello (solo embeddings) ----
+        # Primo modello (solo embedding) era: Linear(d,256) + BN + ReLU + Dropout + Linear(256,1)
+        # Qui lo spezziamo in encoder (fino a 256) + task_head (256 -> 1)
         self.encoder = nn.Sequential(
             nn.Linear(input_dim, 256),
             nn.BatchNorm1d(256),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(256, 128),
-            nn.ReLU(),
         )
+        self.task_head = nn.Linear(256, 1)
 
-        # Testa binaria (protezione 0/1) → singolo logit
-        self.task_head = nn.Linear(128, 1)
-
-        # GRL + testa dominio (habitat)
-        self.grl = GradReverse(lambd=lambda_domain)
+        # ---- Ramo DOMAIN: habitat (multiclasse) con GRL ----
+        self.grl = GradReverse(lambd=self.lambda_domain)
         self.domain_head = nn.Sequential(
-            nn.Linear(128, 64),
+            nn.Linear(256, 64),
             nn.ReLU(),
             nn.Linear(64, num_domains),
         )
@@ -97,7 +103,7 @@ class BinaryDANNClassifier(pl.LightningModule):
         else:
             self.loss_fn = nn.BCEWithLogitsLoss()
 
-        # Metriche per il TASK (binary)
+        # Metriche per il TASK (binary) – stessi tipi del primo modello
         self.train_accuracy  = Accuracy(task="binary")
         self.val_accuracy    = Accuracy(task="binary")
         self.train_precision = Precision(task="binary")
@@ -118,35 +124,40 @@ class BinaryDANNClassifier(pl.LightningModule):
         self.validation_logits = []
         self.validation_labels = []
 
-    # -------- forward: solo task (logit binario) --------
+    # -------- forward: SOLO task (logit binario) --------
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Comportamento identico al primo modello (con soli embedding):
+        embeddings -> encoder -> task_head -> logit [B]
+        """
         z = self.encoder(x)
         logit = self.task_head(z).squeeze(1)  # [B]
         return logit
 
     # -------- training_step --------
     def training_step(self, batch, batch_idx):
+        # Batch: embeddings, labels, domains
         embeddings, labels, domains = batch
         embeddings = embeddings.to(self.device)
         labels     = labels.to(self.device)
         domains    = domains.to(self.device)
 
-        x = embeddings
-        z = self.encoder(x)
-
-        # Task: protezione binaria
+        # ---- TASK ----
+        z = self.encoder(embeddings)
         logits_task = self.task_head(z).squeeze(1)  # [B]
         loss_task = self.loss_fn(logits_task, labels.float())
 
         probs = torch.sigmoid(logits_task)          # [B]
         preds = (probs > 0.5).long()
 
-        # Domain: habitat (via GRL)
+        # ---- DOMAIN (DANN) ----
+        # GRL: se lambda_domain = 0, non passa gradiente all'encoder
         z_rev = self.grl(z)
         logits_domain = self.domain_head(z_rev)     # [B, num_domains]
         loss_domain = F.cross_entropy(logits_domain, domains.long())
 
-        # Loss totale
+        # Loss totale: task + dominio
+        # NB: per il task è importante che il scheduler monitori solo val_loss (= loss_task)
         loss = loss_task + loss_domain
 
         # Metriche task
@@ -160,7 +171,9 @@ class BinaryDANNClassifier(pl.LightningModule):
         pred_dom = torch.argmax(logits_domain, dim=1)
         acc_dom  = self.train_domain_acc(pred_dom, domains)
 
+        # Log "compatibili" col primo modello per il task
         self.log_dict({
+            'train_loss':        loss_task,   # come nel primo modello
             'train_total_loss':  loss,
             'train_task_loss':   loss_task,
             'train_domain_loss': loss_domain,
@@ -181,24 +194,23 @@ class BinaryDANNClassifier(pl.LightningModule):
         labels     = labels.to(self.device)
         domains    = domains.to(self.device)
 
-        x = embeddings
-        z = self.encoder(x)
-
-        # Task
+        # ---- TASK ----
+        z = self.encoder(embeddings)
         logits_task = self.task_head(z).squeeze(1)
         loss_task = self.loss_fn(logits_task, labels.float())
 
         probs = torch.sigmoid(logits_task)
         preds = (probs > 0.5).long()
 
-        # Domain
+        # ---- DOMAIN ----
         z_rev = self.grl(z)
         logits_domain = self.domain_head(z_rev)
         loss_domain = F.cross_entropy(logits_domain, domains.long())
 
+        # Loss totale
         loss = loss_task + loss_domain
 
-        # Accumulo per visualizzazioni finali
+        # Accumulo per visualizzazioni finali (task)
         self.validation_logits.append(logits_task.detach().cpu())
         self.validation_labels.append(labels.detach().cpu())
 
@@ -213,7 +225,9 @@ class BinaryDANNClassifier(pl.LightningModule):
         pred_dom = torch.argmax(logits_domain, dim=1)
         acc_dom  = self.val_domain_acc(pred_dom, domains)
 
+        # Log "compatibili" col primo modello per il task
         self.log_dict({
+            'val_loss':        loss_task,   # come nel primo modello
             'val_total_loss':  loss,
             'val_task_loss':   loss_task,
             'val_domain_loss': loss_domain,
@@ -270,6 +284,7 @@ class BinaryDANNClassifier(pl.LightningModule):
             'scheduler': torch.optim.lr_scheduler.ReduceLROnPlateau(
                 optimizer, mode='min', factor=0.1, patience=5, verbose=True
             ),
-            'monitor': 'val_task_loss'
+            # esattamente come il primo modello → monitoriamo la loss del task
+            'monitor': 'val_loss'
         }
         return [optimizer], [scheduler]

@@ -98,12 +98,12 @@ def main():
             monitor='val_loss',
             dirpath='checkpoints_binary_classifier',
             filename=f"binary-{split_file.stem}-{{val_acc:.2f}}",
-            save_top_k=3,
+            save_top_k=1,
             mode='min',
         )
         early_stopping_callback = EarlyStopping(
             monitor='val_loss',
-            patience=3,
+            patience=10,
             mode='min'
         )
         wandb_logger = WandbLogger(

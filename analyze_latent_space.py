@@ -219,32 +219,41 @@ def main():
     print(f"Numero di campioni nel dataset: {n_samples}")
 
     # 5) Etichette habitat categoriche (fattorizzate)
-    if args.habitats_file is not None:
-        hab_df = pd.read_csv(args.habitats_file)
+    if args.habitat_labels_file is not None:
+        hab_df = pd.read_csv(args.habitat_labels_file)
         if len(hab_df) != n_samples:
             raise ValueError(
-                f"habitats_file ha {len(hab_df)} righe ma il dataset ha {n_samples} campioni."
+                f"habitat_labels_file ha {len(hab_df)} righe ma il dataset ha {n_samples} campioni."
             )
+
+        # 👉 ci aspettiamo una colonna chiamata 'habitat'
         if "habitat" not in hab_df.columns:
-            raise ValueError("habitats_file deve contenere una colonna 'habitat'.")
+            raise ValueError(
+                f"habitat_labels_file deve contenere una colonna 'habitat'. "
+                f"Colonne disponibili: {list(hab_df.columns)}"
+            )
+
         hab_str = hab_df["habitat"].astype(str).values
         hab_codes, hab_uniques = pd.factorize(hab_str)
-        # Logghiamo la mappatura label -> codice
+
+        # Logghiamo la mappatura label -> codice su WandB
         mapping_table = wandb.Table(columns=["habitat", "code"])
-        for lbl, code in zip(hab_uniques, range(len(hab_uniques))):
-            mapping_table.add_data(lbl, code)
-        wandb.log({"habitat_mapping": mapping_table})
+        for code, lbl in enumerate(hab_uniques):
+            mapping_table.add_data(str(lbl), int(code))
+        wandb.log({"habitat_label_mapping": mapping_table})
+
     else:
-        # fallback: fattorizza argmax sul vettore habitat del dataset
-        # (ad esempio se full_ds.habitats è un one-hot o simile)
+        # Fallback: se NON viene passato habitat_labels_file,
+        # usiamo l'argmax delle feature habitat numeriche del dataset.
         habitats = full_ds.habitats   # numpy array [N, H] o tensor
         if torch.is_tensor(habitats):
             habitats_np = habitats.numpy()
         else:
             habitats_np = habitats
-        hab_idx = habitats_np.argmax(axis=1)
-        hab_codes = hab_idx
+
+        hab_codes = habitats_np.argmax(axis=1)
         hab_uniques = np.unique(hab_codes)
+
         mapping_table = wandb.Table(columns=["habitat_code"])
         for code in hab_uniques:
             mapping_table.add_data(int(code))

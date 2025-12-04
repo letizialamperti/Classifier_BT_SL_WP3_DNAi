@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import wandb
 
-from coral_loss_wheighted import WeightedCoralLoss  
+from ORDNA.models.coral_loss_wheighted import WeightedCoralLoss  
 
 # Helper: convert CORAL logits to discrete class labels
 def coral_to_label(logits):

@@ -22,7 +22,9 @@ conda activate zioboia
 # ==========================
 EMBEDDINGS="BT_output/train/embedding_coords_460_all_data_.csv"
 PROTECTION="label/labels_5_levels.csv"
-HABITAT="habitat/label_habitat_macro_460.csv"
+HABITAT="habitat/empty_label_habitat_460.csv"
+
+HABITAT_COL="habitat/label_habitat_macro_460.csv"
 
 
 # === Checkpoint da analizzare ===
@@ -44,7 +46,7 @@ python analyze_latent_space.py \
     --embeddings_file "$EMBEDDINGS" \
     --protection_file "$PROTECTION" \
     --habitat_file "$HABITAT" \
-    --habitat_labels_file "$HABITAT" \
+    --habitat_labels_file "$HABITAT_COL" \
     --num_classes $NUM_CLASSES \
     --batch_size $BATCH_SIZE \
     --max_points $MAX_POINTS \

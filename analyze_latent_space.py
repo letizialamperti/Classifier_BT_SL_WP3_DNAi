@@ -13,10 +13,8 @@ from sklearn.metrics import pairwise_distances
 
 import wandb
 
-
 from merged_dataset import MergedDataset
 from ORDNA.models.classifier_coralwheighted import Classifier
-
 
 
 # ---------- Estrazione spazio latente ----------
@@ -25,14 +23,17 @@ from ORDNA.models.classifier_coralwheighted import Classifier
 def extract_latent_representations(model, dataset, batch_size=128, device="cuda"):
     """
     Estrae:
-      - latent: rappresentazioni 256D dal penultimo layer
+      - latent: rappresentazioni dal penultimo layer del classificatore
       - prot_labels: etichette di protezione (0..K-1)
-    NB: le etichette di habitat categoriche le passiamo da un CSV separato.
+    NB: le etichette di habitat categoriali arrivano da un CSV separato.
     """
     loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 
     model.eval()
     model.to(device)
+
+    # dimensione di input attesa dal primo Linear del classifier
+    expected_in = model.classifier[0].in_features
 
     all_latent = []
     all_prot = []
@@ -42,17 +43,26 @@ def extract_latent_representations(model, dataset, batch_size=128, device="cuda"
         hab = hab.to(device)
         prot = prot.to(device)
 
-        x = torch.cat((emb, hab), dim=1)  # [B, sample_emb_dim + habitat_dim]
+        x = torch.cat((emb, hab), dim=1)  # [B, D_current]
+        D_current = x.shape[1]
 
-        # Il tuo classifier:
-        # Linear -> BN -> ReLU -> Dropout -> Linear
-        # Usiamo tutto tranne l'ultimo Linear: model.classifier[:-1](x)
-        latent = model.classifier[:-1](x)  # shape [B, 256]
+        if D_current > expected_in:
+            # taglia le feature in eccesso (usa le prime expected_in)
+            x = x[:, :expected_in]
+        elif D_current < expected_in:
+            raise RuntimeError(
+                f"Input dim {D_current} < expected {expected_in}. "
+                f"Probabile mismatch tra dataset e modello."
+            )
+
+        # Il classifier è: Linear -> BN -> ReLU -> Dropout -> Linear
+        # Usiamo tutto tranne l'ultimo Linear:
+        latent = model.classifier[:-1](x)  # shape [B, hidden_dim]
 
         all_latent.append(latent.cpu())
         all_prot.append(prot.cpu())
 
-    all_latent = torch.cat(all_latent, dim=0).numpy()   # [N, 256]
+    all_latent = torch.cat(all_latent, dim=0).numpy()   # [N, H]
     all_prot = torch.cat(all_prot, dim=0).numpy()       # [N]
 
     return all_latent, all_prot
@@ -92,7 +102,7 @@ def pcoa_2d(latent):
 
     # 3) Autovalori/autovettori
     eigvals, eigvecs = np.linalg.eigh(B)  # eigh = simmetrica
-    # ordina in valore assoluto decrescente (autovalori potrebbero essere leggermente negativi numericamente)
+    # ordina in valore assoluto decrescente (autovalori possono avere piccoli negativi numerici)
     idx = np.argsort(eigvals)[::-1]
     eigvals = eigvals[idx]
     eigvecs = eigvecs[:, idx]
@@ -133,18 +143,44 @@ def maybe_subsample(latent, prot_labels, habitats, max_points, random_state=0):
     return latent_sub, prot_sub, hab_sub
 
 
-def plot_scatter(latent_2d, labels, title, cmap="viridis"):
+def plot_scatter(latent_2d, labels, title, categories=None, cmap="tab20"):
     """
-    Ritorna una figura matplotlib con scatter 2D colorato per labels.
+    Scatter 2D per labels discreti (protection o habitat).
+
+    labels     = array di codici numerici (es. 0,1,2,...)
+    categories = lista dei nomi delle categorie (stessa lunghezza dei codici unici)
+                 Se None → usa semplicemente i codici come stringhe.
     """
+    labels = np.asarray(labels)
+    unique_labels = np.unique(labels)
+
+    # Se categories non è fornito, usiamo le stringhe dei codici
+    if categories is None:
+        categories = [str(u) for u in unique_labels]
+
+    # Colori discreti
+    cmap_obj = plt.get_cmap(cmap)
+    colors = cmap_obj(np.linspace(0, 1, len(unique_labels)))
+
     fig, ax = plt.subplots(figsize=(7, 6))
-    sc = ax.scatter(latent_2d[:, 0], latent_2d[:, 1],
-                    c=labels, cmap=cmap, s=10, alpha=0.7)
-    cb = fig.colorbar(sc, ax=ax)
-    cb.set_label("label")
+
+    # Plot per categoria (così possiamo costruire la legenda)
+    for idx, u in enumerate(unique_labels):
+        mask = labels == u
+        ax.scatter(
+            latent_2d[mask, 0],
+            latent_2d[mask, 1],
+            s=10,
+            alpha=0.7,
+            color=colors[idx],
+            label=categories[idx]
+        )
+
     ax.set_title(title)
     ax.set_xlabel("Dim 1")
     ax.set_ylabel("Dim 2")
+    ax.legend(title="Category", fontsize=8)
+
     fig.tight_layout()
     return fig
 
@@ -153,13 +189,13 @@ def plot_scatter(latent_2d, labels, title, cmap="viridis"):
 
 def main():
 
-    # ---------- PARSER  ----------
+    # ---------- PARSER SEMPLICE ----------
     parser = argparse.ArgumentParser()
     parser.add_argument("--embeddings_file", type=str, required=True)
     parser.add_argument("--protection_file", type=str, required=True)
     parser.add_argument("--habitat_file", type=str, required=True)
 
-    # CSV con etichette categoriche per visualizzare l'habitat
+    # CSV con etichette categoriali per visualizzare l'habitat
     parser.add_argument("--habitat_labels_file", type=str, default=None)
 
     parser.add_argument("--checkpoint", type=str, required=True)
@@ -173,9 +209,7 @@ def main():
     parser.add_argument("--wandb_run_name", type=str, default="coral_latent_analysis")
 
     args = parser.parse_args()
-    # -----------------------------------------------------------
-
-
+    # -------------------------------------
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -196,12 +230,11 @@ def main():
         args.habitat_file
     )
 
-    # 3) Carica modello dal checkpoint
+    # 3) Carica modello dal checkpoint (usa hparams salvati)
     model = Classifier.load_from_checkpoint(
         checkpoint_path=args.checkpoint,
-        strict=True  # oppure strict=False se stai sperimentando versioni leggermente diverse
+        strict=True
     )
-
 
     # 4) Estrai spazio latente + etichette protezione
     latent, prot_labels = extract_latent_representations(
@@ -222,7 +255,7 @@ def main():
                 f"habitat_labels_file ha {len(hab_df)} righe ma il dataset ha {n_samples} campioni."
             )
 
-        # 👉 ci aspettiamo una colonna chiamata 'habitat'
+        # ci aspettiamo una colonna chiamata 'habitat'
         if "habitat" not in hab_df.columns:
             raise ValueError(
                 f"habitat_labels_file deve contenere una colonna 'habitat'. "
@@ -231,6 +264,9 @@ def main():
 
         hab_str = hab_df["habitat"].astype(str).values
         hab_codes, hab_uniques = pd.factorize(hab_str)
+
+        # categorie nominali (per legenda)
+        hab_categories = [str(lbl) for lbl in hab_uniques]
 
         # Logghiamo la mappatura label -> codice su WandB
         mapping_table = wandb.Table(columns=["habitat", "code"])
@@ -250,6 +286,9 @@ def main():
         hab_codes = habitats_np.argmax(axis=1)
         hab_uniques = np.unique(hab_codes)
 
+        # categorie nominali anche nel fallback (usiamo i codici come stringhe)
+        hab_categories = [str(code) for code in hab_uniques]
+
         mapping_table = wandb.Table(columns=["habitat_code"])
         for code in hab_uniques:
             mapping_table.add_data(int(code))
@@ -261,7 +300,7 @@ def main():
     )
     print(f"Useremo {latent_sub.shape[0]} punti per t-SNE e PCoA.")
 
-    # 7) PCA 2D (solo per debug / baseline)
+    # 7) PCA 2D
     latent_pca_2d, pca_var = pca_2d(latent_sub)
     wandb.log({
         "pca_var_explained_PC1": float(pca_var[0]),
@@ -274,7 +313,8 @@ def main():
     )
     fig_pca_hab = plot_scatter(
         latent_pca_2d, hab_sub,
-        title="PCA (2D) - colored by habitat"
+        title="PCA (2D) - colored by habitat",
+        categories=hab_categories
     )
     wandb.log({
         "PCA_protection": wandb.Image(fig_pca_prot),
@@ -284,14 +324,18 @@ def main():
     plt.close(fig_pca_hab)
 
     # 8) t-SNE 2D
-    latent_tsne_2d = tsne_2d(latent_sub, perplexity=min(30, max(5, latent_sub.shape[0] // 10)))
+    latent_tsne_2d = tsne_2d(
+        latent_sub,
+        perplexity=min(30, max(5, latent_sub.shape[0] // 10))
+    )
     fig_tsne_prot = plot_scatter(
         latent_tsne_2d, prot_sub,
         title="t-SNE (2D) - colored by protection"
     )
     fig_tsne_hab = plot_scatter(
         latent_tsne_2d, hab_sub,
-        title="t-SNE (2D) - colored by habitat"
+        title="t-SNE (2D) - colored by habitat",
+        categories=hab_categories
     )
     wandb.log({
         "tSNE_protection": wandb.Image(fig_tsne_prot),
@@ -313,7 +357,8 @@ def main():
     )
     fig_pcoa_hab = plot_scatter(
         latent_pcoa_2d, hab_sub,
-        title="PCoA (2D) - colored by habitat"
+        title="PCoA (2D) - colored by habitat",
+        categories=hab_categories
     )
     wandb.log({
         "PCoA_protection": wandb.Image(fig_pcoa_prot),

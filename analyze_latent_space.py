@@ -13,9 +13,9 @@ from sklearn.metrics import pairwise_distances
 
 import wandb
 
-# Adatta questi import ai tuoi path reali
+
 from merged_dataset import MergedDataset
-from ORDNA.models.classifier import Classifier
+from ORDNA.models.classifier_coralwheighted import Classifier
 
 
 # ---------- CLI ----------

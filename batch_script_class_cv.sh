@@ -36,8 +36,7 @@ for fold in {1..5}; do
     --habitat_file "$HABITAT_FILE" \
     --k_cross_file "$K_CROSS_FILE" \
     --num_classes 5 \
-    --batch_size 64
- \
+    --batch_size 32 \
     --initial_learning_rate 1e-3 \
     --max_epochs 100 \
     --accelerator gpu

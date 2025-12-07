@@ -29,6 +29,8 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('--habitat_labels_file',type=str,default=None,help='CSV con etichette di habitat (stesso numero di righe del dataset).')
     parser.add_argument('--k_cross_file',   required=True, type=str, help='Path to the k-fold split CSV (spygen_code + set=train/validation).')
     parser.add_argument("--lambda_domain", type=float, default=1.0, help="Weight of the domain-adversarial loss (DANN)")
+    parser.add_argument("--lambda_boundary",type=float,default=0, help="Strength della penalty sulla prima soglia CORAL (protetto vs non protetto).")
+
     
     # Model and training hyperparameters
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size for training and evaluation.')

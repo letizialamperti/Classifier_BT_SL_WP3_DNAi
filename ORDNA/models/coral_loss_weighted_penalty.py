@@ -1,7 +1,10 @@
+# ORDNA/models/coral_loss_weighted_penalty.py
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# Usiamo la tua CORAL pesata di base
 from ORDNA.models.coral_loss_wheighted import coral_loss_weighted
 
 
@@ -12,16 +15,19 @@ def coral_loss_weighted_with_boundary_penalty(
     num_classes,
     pos_weights=None,
     importance_weights=None,
-    lambda_boundary: float = 1.0,
+    lambda_boundary: float = 0.05,
     reduction: str = 'mean',
 ):
     """
-    Estende coral_loss_weighted aggiungendo una penalty che punisce
-    quando un campione protetto (y>0) viene "spinto" verso la classe 0,
-    usando la prima soglia CORAL (j=0).
+    Estende coral_loss_weighted aggiungendo una penalty MORBIDA sulla
+    prima soglia CORAL (j=0), per separare meglio classe 0 da (1..K-1).
 
     Penalty per campione i:
-        pen_i = lambda_boundary * 1[y_i>0] * (y_i/(K-1)) * (1 - sigmoid(z_{i0}))
+        pen_i = lambda_boundary * 1[y_i>0] * (1 - sigmoid(z_{i0}))^2
+
+    - 1[y_i>0]  → agisce solo sui campioni protetti (1..K-1)
+    - (1 - sigmoid(z_{i0}))^2  → grande solo se p(y>0) è bassa
+      (cioè se stiamo trattando un campione protetto come non protetto).
 
     Args
     ----
@@ -39,6 +45,7 @@ def coral_loss_weighted_with_boundary_penalty(
         Pesi di importanza per soglia.
     lambda_boundary : float
         Iperparametro che controlla la forza della penalty sul confine 0 vs >0.
+        Valori consigliati: 0.01, 0.05, 0.1.
     reduction : 'mean' | 'sum' | None
         Come in coral_loss_weighted.
 
@@ -50,7 +57,7 @@ def coral_loss_weighted_with_boundary_penalty(
     device = logits.device
     labels = labels.to(device)
 
-    # 1) loss CORAL standard pesata (per-sample)
+    # 1) loss CORAL pesata base (per-sample)
     base_per_sample = coral_loss_weighted(
         logits,
         levels,
@@ -59,20 +66,19 @@ def coral_loss_weighted_with_boundary_penalty(
         reduction=None,  # -> (N,)
     )  # shape: (N,)
 
-    # 2) Boundary penalty sulla prima soglia (j=0)
+    # 2) Boundary penalty morbida sulla prima soglia (j=0)
+    #    p0 = P(y>0) per ogni campione
     z0 = logits[:, 0]            # (N,)
-    p0 = torch.sigmoid(z0)       # p(y>0) per ogni campione
+    p0 = torch.sigmoid(z0)       # (N,)
 
     # mask: 1 per campioni protetti (classi 1..K-1), 0 per classe 0
-    protected_mask = (labels > 0).float()
-
-    # forza di protezione normalizzata [0,1] = y/(K-1)
-    strength = labels.float() / float(num_classes - 1)  # 0..1
+    protected_mask = (labels > 0).float()  # (N,)
 
     # penalty per campione:
-    # se y=0 => mask=0 => penalty=0
-    # se y>0 e p0 è basso => penalty alta
-    penalty_per_sample = lambda_boundary * protected_mask * strength * (1.0 - p0)
+    #  - se y=0 => mask=0 => penalty=0
+    #  - se y>0 ma p0 ~1 => (1-p0)^2 ~ 0 => penalty quasi nulla
+    #  - se y>0 e p0 è bassa => penalty alta, spinge p0 verso 1
+    penalty_per_sample = lambda_boundary * protected_mask * (1.0 - p0) ** 2
 
     total_per_sample = base_per_sample + penalty_per_sample  # (N,)
 
@@ -91,7 +97,7 @@ class WeightedCoralLossWithBoundaryPenalty(nn.Module):
     Wrapper nn.Module attorno a coral_loss_weighted_with_boundary_penalty
     da usare comodamente nel LightningModule.
     """
-    def __init__(self, num_classes: int, lambda_boundary: float = 1.0, reduction: str = 'mean'):
+    def __init__(self, num_classes: int, lambda_boundary: float = 0.05, reduction: str = 'mean'):
         super().__init__()
         self.num_classes = num_classes
         self.lambda_boundary = lambda_boundary

@@ -139,9 +139,19 @@ def main():
         'prediction':  preds,
         'residual':    [l - p for l, p in zip(labels, preds)]
     })
-    out_csv = Path(args.k_cross_file).stem.replace('split', 'metrics') + '.csv'
+    # ========= SAVE METRICS IN DEDICATED FOLDER ========= #
+
+    metrics_dir = Path("metrics_coralwpenalty")
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Nome file basato sul nome dello split
+    metrics_name = Path(args.k_cross_file).stem.replace("split", "metrics") + ".csv"
+    
+    out_csv = metrics_dir / metrics_name
     df_met.to_csv(out_csv, index=False)
+    
     print(f"Saved metrics to {out_csv}")
+
 
 
 if __name__ == "__main__":

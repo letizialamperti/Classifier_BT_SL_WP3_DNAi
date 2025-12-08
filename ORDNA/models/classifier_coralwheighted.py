@@ -49,7 +49,9 @@ class Classifier(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.num_classes = num_classes
-        input_dim = sample_emb_dim + habitat_dim
+        # PRIMA: input_dim = sample_emb_dim + habitat_dim
+        input_dim = sample_emb_dim  # <-- ora usiamo solo gli embeddings
+        
 
         # Classifier architecture
         self.classifier = nn.Sequential(
@@ -97,11 +99,12 @@ class Classifier(pl.LightningModule):
         return self.classifier(x)
 
     def training_step(self, batch, batch_idx: int) -> torch.Tensor:
-        embeddings, habitats, labels = batch
+        embeddings, _, labels = batch
         embeddings = embeddings.to(self.device)
         habitats = habitats.to(self.device)
         labels = labels.to(self.device)
-        combined_input = torch.cat((embeddings, habitats), dim=1)
+        #combined_input = torch.cat((embeddings, habitats), dim=1)
+        combined_input = embeddings 
 
         # Get the logits from the classifier
         output = self(combined_input)  # shape (B, num_classes-1)
@@ -136,11 +139,13 @@ class Classifier(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx: int):
-        embeddings, habitats, labels = batch
+        embeddings, _, labels = batch
         embeddings = embeddings.to(self.device)
         habitats = habitats.to(self.device)
         labels = labels.to(self.device)
-        combined_input = torch.cat((embeddings, habitats), dim=1)
+        #combined_input = torch.cat((embeddings, habitats), dim=1)
+        combined_input = embeddings
+        
 
         # Get the logits from the classifier
         output = self(combined_input)  # shape (B, num_classes-1)

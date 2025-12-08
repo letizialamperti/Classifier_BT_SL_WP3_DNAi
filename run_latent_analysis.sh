@@ -28,13 +28,13 @@ HABITAT_COL="habitat/label_habitat_460.csv"
 
 
 # === Checkpoint da analizzare ===
-CHECKPOINT="CV_Class/xnqd1l9b/checkpoints/epoch=32-step=1155.ckpt"
+CHECKPOINT="CV_Class/1bhnytg5/checkpoints/epoch=39-step=440.ckpt"
 
 # ==========================
 #      ANALYSIS PARAMETERS
 # ==========================
 NUM_CLASSES=5
-BATCH_SIZE=10
+BATCH_SIZE=32
 MAX_POINTS=460   # limite massimo punti per t-SNE/PCoA
 WANDB_PROJECT="LatentSpaceCORAL"
 WANDB_RUN_NAME="coral_weighted_latent"

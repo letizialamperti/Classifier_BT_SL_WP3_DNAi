@@ -11,6 +11,32 @@ import wandb
 
 from ORDNA.models.coral_loss_wheighted import WeightedCoralLoss  
 
+class CoralLayer(nn.Module):
+    def __init__(self, input_dim: int, num_classes: int):
+        super().__init__()
+        self.num_classes = num_classes
+        self.fc = nn.Linear(input_dim, 1)  # shared weights → base logit f(x)
+
+        # Parametri "liberi" che useremo per costruire bias ordinati
+        # shape: (K-1,)
+        self.gamma = nn.Parameter(torch.zeros(num_classes - 1))
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        x: (B, input_dim)
+        return: logits (B, K-1) con z_0 >= z_1 >= ... garantito
+        """
+        base = self.fc(x)  # (B, 1)
+
+        # Increments strettamente positivi
+        increments = F.softplus(self.gamma)  # (K-1,), > 0
+
+        # Bias cumulativi: b_0 < b_1 < ... < b_{K-2}
+        biases = torch.cumsum(increments, dim=0)  # (K-1,)
+
+        # z_j = base - b_j  → z_0 >= z_1 >= ... (per tutti gli x)
+        logits = base - biases  # broadcasting: (B,1) - (K-1,) -> (B, K-1)
+        return logits
 
 # Helper: convert CORAL logits to discrete class labels
 def coral_to_label(logits):
@@ -54,13 +80,17 @@ class Classifier(pl.LightningModule):
         input_dim = sample_emb_dim
 
         # Classifier architecture
-        self.classifier = nn.Sequential(
+        
+
+        self.feature_extractor = nn.Sequential(
             nn.Linear(input_dim, 256),
             nn.BatchNorm1d(256),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(256, num_classes - 1)  # CORAL: outputs num_classes-1 logits
         )
+
+        self.coral_layer = CoralLayer(input_dim=256, num_classes=num_classes)
+
 
         # 🔹 Loss CORAL pesata
         self.loss_fn = WeightedCoralLoss(reduction='mean')   # per training/val_loss
@@ -94,8 +124,10 @@ class Classifier(pl.LightningModule):
         self.validation_raw_loss = []  # per-sample loss per istogramma
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x shape: (B, sample_emb_dim)
-        return self.classifier(x)
+        h = self.feature_extractor(x)   # (B, 256)
+        logits = self.coral_layer(h)    # (B, num_classes - 1) con z_0 >= z_1 >= ... garantito
+        return logits
+
 
     def training_step(self, batch, batch_idx: int) -> torch.Tensor:
         # Il DataLoader ora deve fornire: (embeddings, labels)

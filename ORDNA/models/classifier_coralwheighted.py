@@ -99,9 +99,9 @@ class Classifier(pl.LightningModule):
         return self.classifier(x)
 
     def training_step(self, batch, batch_idx: int) -> torch.Tensor:
-        embeddings, _, labels = batch
+        embeddings, habitats, labels = batch
         embeddings = embeddings.to(self.device)
-        #habitats = habitats.to(self.device)
+        habitats = habitats.to(self.device)
         labels = labels.to(self.device)
         combined_input = torch.cat((embeddings, habitats), dim=1)
         #combined_input = embeddings 
@@ -139,9 +139,9 @@ class Classifier(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx: int):
-        embeddings, _, labels = batch
+        embeddings, habitats, labels = batch
         embeddings = embeddings.to(self.device)
-        #habitats = habitats.to(self.device)
+        habitats = habitats.to(self.device)
         labels = labels.to(self.device)
         combined_input = torch.cat((embeddings, habitats), dim=1)
         #combined_input = embeddings

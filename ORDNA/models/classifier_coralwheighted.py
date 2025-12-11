@@ -49,8 +49,8 @@ class Classifier(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
         self.num_classes = num_classes
-        # PRIMA: input_dim = sample_emb_dim + habitat_dim
-        input_dim = sample_emb_dim  # <-- ora usiamo solo gli embeddings
+        input_dim = sample_emb_dim + habitat_dim
+        #input_dim = sample_emb_dim  # <-- ora usiamo solo gli embeddings
         
 
         # Classifier architecture
@@ -103,8 +103,8 @@ class Classifier(pl.LightningModule):
         embeddings = embeddings.to(self.device)
         #habitats = habitats.to(self.device)
         labels = labels.to(self.device)
-        #combined_input = torch.cat((embeddings, habitats), dim=1)
-        combined_input = embeddings 
+        combined_input = torch.cat((embeddings, habitats), dim=1)
+        #combined_input = embeddings 
 
         # Get the logits from the classifier
         output = self(combined_input)  # shape (B, num_classes-1)
@@ -143,8 +143,8 @@ class Classifier(pl.LightningModule):
         embeddings = embeddings.to(self.device)
         #habitats = habitats.to(self.device)
         labels = labels.to(self.device)
-        #combined_input = torch.cat((embeddings, habitats), dim=1)
-        combined_input = embeddings
+        combined_input = torch.cat((embeddings, habitats), dim=1)
+        #combined_input = embeddings
         
 
         # Get the logits from the classifier

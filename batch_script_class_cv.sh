@@ -23,13 +23,13 @@ echo "Starting cross-validation over 5 folds…"
 
 for fold in {1..5}; do
   fold_padded=$(printf "%02d" "$fold")
-  K_CROSS_FILE="k_cross/split_5_fold_${fold_padded}.csv"
+  K_CROSS_FILE="k_cross/split_5_no_corallig_fold_${fold_padded}.csv"
 
   echo "=== Fold $fold_padded → using split file $K_CROSS_FILE ==="
 
   export CUDA_LAUNCH_BLOCKING=1
 
-  python train_cv_multiclass_coralwheighted_nohabitat.py \
+  python train_cv_multiclass_coralwheighted.py \
     --arg_log True \
     --embeddings_file "$EMBEDDINGS_FILE" \
     --protection_file "$PROTECTION_FILE" \

@@ -11,13 +11,15 @@ from ORDNA.models.classifier_coralwheighted import Classifier
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Testare il classificatore su una lista di spygen_code")
+    parser = argparse.ArgumentParser(
+        description="Testare il classificatore su una lista di spygen_code"
+    )
 
     parser.add_argument("--checkpoint", type=str, required=True,
                         help="Percorso al file .ckpt salvato dal training")
 
     parser.add_argument("--embeddings_file", type=str, required=True,
-                        help="File con gli embeddings")
+                        help="File con gli embeddings (es. .csv o .npy)")
 
     parser.add_argument("--protection_file", type=str, required=True,
                         help="File CSV con le etichette di protezione")
@@ -37,6 +39,18 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=42,
                         help="Seed per la riproducibilità")
 
+    # Solo per compatibilità con il tuo .sh (non usato nel test)
+    parser.add_argument("--num_classes", type=int, default=None,
+                        help="Non usato, tenuto solo per compatibilità con lo script .sh")
+
+    parser.add_argument(
+        "--device",
+        type=str,
+        choices=["cpu", "cuda"],
+        default=None,
+        help="Dispositivo su cui eseguire il modello (default: cuda se disponibile, altrimenti cpu)"
+    )
+
     return parser.parse_args()
 
 
@@ -55,13 +69,16 @@ def main():
     # 2) Mappatura spygen_code -> indice nel dataset
     code_to_idx = {code: i for i, code in enumerate(full_ds.codes)}
 
-    missing_codes = [c for c in args.spygen_codes if c not in code_to_idx]
+    # Normalizza i codici a stringa (se nel dataset sono stringhe)
+    requested_codes = [str(c) for c in args.spygen_codes]
+
+    missing_codes = [c for c in requested_codes if c not in code_to_idx]
     if missing_codes:
         raise ValueError(
             f"I seguenti spygen_code non sono presenti nel dataset: {missing_codes}"
         )
 
-    selected_indices = [code_to_idx[c] for c in args.spygen_codes]
+    selected_indices = [code_to_idx[c] for c in requested_codes]
 
     test_ds = Subset(full_ds, selected_indices)
 
@@ -73,17 +90,22 @@ def main():
     )
 
     # 3) Carica il modello dal checkpoint
-    #    (assumendo che il Classifier salvi gli hyperparameters con self.save_hyperparameters())
     print(f"Carico il modello da: {args.checkpoint}")
     model = Classifier.load_from_checkpoint(args.checkpoint)
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    if args.device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+    else:
+        device = args.device
+
     model.to(device)
     model.eval()
     model.freeze()
 
     preds = []
     labels = []
+
+    # per ricostruire i codici nell'ordine dei subset indices
     all_codes = [full_ds.codes[i] for i in selected_indices]
 
     # 4) Inference

@@ -17,13 +17,13 @@ conda activate zioboia
 # Percorsi ai dati (non cambiano fold-per-fold)
 EMBEDDINGS_FILE="BT_output/train/embedding_coords_460_all_data_.csv"
 PROTECTION_FILE="label/labels_5_levels.csv"
-HABITAT_FILE="habitat/label_habitat_460.csv"
+HABITAT_FILE="habitat/label_empty_habitat_460.csv"
 
 echo "Starting cross-validation over 5 folds…"
 
 for fold in {1..5}; do
   fold_padded=$(printf "%02d" "$fold")
-  K_CROSS_FILE="k_cross/split_5_no_corallig_fold_${fold_padded}.csv"
+  K_CROSS_FILE="k_cross/split_5_fold_${fold_padded}.csv"
 
   echo "=== Fold $fold_padded → using split file $K_CROSS_FILE ==="
 

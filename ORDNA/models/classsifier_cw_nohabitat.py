@@ -15,7 +15,7 @@ class CoralLayer(nn.Module):
     def __init__(self, input_dim: int, num_classes: int):
         super().__init__()
         self.num_classes = num_classes
-        self.fc = nn.Linear(input_dim, 1)  # shared weights → base logit f(x)
+        self.fc = nn.Linear(input_dim, 1,bias=False))  # shared weights → base logit f(x)
 
         # Parametri "liberi" che useremo per costruire bias ordinati
         # shape: (K-1,)

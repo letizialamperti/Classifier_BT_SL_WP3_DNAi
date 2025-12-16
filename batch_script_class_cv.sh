@@ -16,7 +16,7 @@ conda activate zioboia
 
 # Percorsi ai dati (non cambiano fold-per-fold)
 EMBEDDINGS_FILE="BT_output/train/embedding_coords_460_all_data_.csv"
-PROTECTION_FILE="label/labels_5_levels.csv"
+PROTECTION_FILE="label/labels_4_levels.csv"
 HABITAT_FILE="habitat/empty_label_habitat_460.csv"
 
 echo "Starting cross-validation over 5 folds…"

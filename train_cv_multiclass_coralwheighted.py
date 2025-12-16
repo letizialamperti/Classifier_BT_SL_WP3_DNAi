@@ -76,6 +76,10 @@ def main():
         Path(args.protection_file),
         args.num_classes
     )
+    # 3) pesi CORAL aggiungiamo valore alla soglia 0-1
+
+    pos_weights = pos_weights.clone()
+    pos_weights[0] *= 3 
 
     # 4) modello
     model = Classifier(

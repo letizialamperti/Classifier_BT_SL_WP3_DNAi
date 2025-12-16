@@ -23,7 +23,7 @@ echo "Starting cross-validation over 5 folds…"
 
 for fold in {1..5}; do
   fold_padded=$(printf "%02d" "$fold")
-  K_CROSS_FILE="k_cross/split_5_fold_${fold_padded}.csv"
+  K_CROSS_FILE="k_cross/new_split_4_fold_${fold_padded}.csv"
 
   echo "=== Fold $fold_padded → using split file $K_CROSS_FILE ==="
 
@@ -35,7 +35,7 @@ for fold in {1..5}; do
     --protection_file "$PROTECTION_FILE" \
     --habitat_file "$HABITAT_FILE" \
     --k_cross_file "$K_CROSS_FILE" \
-    --num_classes 5 \
+    --num_classes 4 \
     --batch_size 32 \
     --initial_learning_rate 1e-3 \
     --max_epochs 100 \

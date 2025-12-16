@@ -19,9 +19,9 @@ EMBEDDINGS_FILE="BT_output/train/embedding_coords_460_all_data_.csv"
 PROTECTION_FILE="label/labels_4_levels.csv"
 HABITAT_FILE="habitat/empty_label_habitat_460.csv"
 
-echo "Starting cross-validation over 5 folds…"
+echo "Starting cross-validation over 4 folds…"
 
-for fold in {1..5}; do
+for fold in {1..4}; do
   fold_padded=$(printf "%02d" "$fold")
   K_CROSS_FILE="k_cross/new_split_4_fold_${fold_padded}.csv"
 
@@ -44,4 +44,4 @@ for fold in {1..5}; do
   echo "=== Fold $fold_padded completed ==="
 done
 
-echo "All 5 folds have been processed successfully."
+echo "All 4 folds have been processed successfully."

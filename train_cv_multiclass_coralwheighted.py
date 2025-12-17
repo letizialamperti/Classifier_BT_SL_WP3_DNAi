@@ -7,12 +7,12 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 from merged_dataset import MergedDataset
-from ORDNA.models.classifier_coralweighted_monotone import Classifier
+from ORDNA.models.classifier_coralweighted import Classifier
 
 from pathlib import Path
 from ORDNA.utils.argparser import get_args, write_config_file
 from ORDNA.utils.utils import compute_coral_weights_from_csv 
-from ORDNA.models.coral_loss_wheighted import WeightedCoralLoss 
+from ORDNA.models.coral_loss_weighted_BCEwithLogits import WeightedCoralLoss 
 
 def calculate_class_weights_from_csv_coral(protection_file: Path, num_classes: int) -> torch.Tensor:
     """

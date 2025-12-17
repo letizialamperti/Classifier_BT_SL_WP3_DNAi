@@ -53,7 +53,7 @@ def main():
     # 2) dataset e subset
     full_ds     = MergedDataset(args.embeddings_file,
                                 args.protection_file,
-                                args.habitat_file)
+                                args.habitat_file
     code_to_idx = {code: i for i, code in enumerate(full_ds.codes)}
     train_idx   = [code_to_idx[c] for c in train_codes]
     val_idx     = [code_to_idx[c] for c in val_codes]
@@ -79,7 +79,7 @@ def main():
     # 3) pesi CORAL aggiungiamo valore alla soglia 0-1
 
     pos_weights = pos_weights.clone()
-    pos_weights[0] *= 2
+    pos_weights[0] *= 4
 
     # 4) modello
     model = Classifier(

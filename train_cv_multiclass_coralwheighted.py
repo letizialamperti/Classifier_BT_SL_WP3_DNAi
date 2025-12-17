@@ -53,7 +53,7 @@ def main():
     # 2) dataset e subset
     full_ds     = MergedDataset(args.embeddings_file,
                                 args.protection_file,
-                                args.habitat_file
+                                args.habitat_file)
     code_to_idx = {code: i for i, code in enumerate(full_ds.codes)}
     train_idx   = [code_to_idx[c] for c in train_codes]
     val_idx     = [code_to_idx[c] for c in val_codes]

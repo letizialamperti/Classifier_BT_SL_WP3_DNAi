@@ -79,7 +79,7 @@ def main():
     # 3) pesi CORAL aggiungiamo valore alla soglia 0-1
 
     pos_weights = pos_weights.clone()
-    pos_weights[0] *= 5
+    pos_weights[0] *= 2
 
     # 4) modello
     model = Classifier(

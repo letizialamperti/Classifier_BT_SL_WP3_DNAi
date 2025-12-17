@@ -15,13 +15,15 @@ from ORDNA.models.coral_loss_weighted_BCEwithLogits import WeightedCoralLoss
 # Helpers
 # ------------------------
 
-def coral_to_label(logits: torch.Tensor) -> torch.Tensor:
+def monotonicity_violation_rate(logits: torch.Tensor) -> torch.Tensor:
     """
-    Old heuristic: counts thresholds with sigmoid(logit)>0.5.
-    Kept here only for comparison/debug.
+    logits: (B, K-1)
+    returns: frazione media di violazioni p[j] < p[j+1]
     """
-    prob = torch.sigmoid(logits)
-    return torch.sum(prob > 0.5, dim=1)
+    p = torch.sigmoid(logits)          # (B, K-1)
+    violations = (p[:, :-1] < p[:, 1:]).float()
+    return violations.mean()
+
 
 
 def coral_logits_to_class_probs(
@@ -194,6 +196,9 @@ class Classifier(pl.LightningModule):
 
         # ✅ Correct decoding (A)
         _, pred = coral_logits_to_class_probs(output)
+        violation_rate = monotonicity_violation_rate(output)
+        self.log("val_monotonicity_violation_rate", violation_rate, on_epoch=True)
+
 
         accuracy  = self.val_accuracy(pred, labels)
         precision = self.val_precision(pred, labels)

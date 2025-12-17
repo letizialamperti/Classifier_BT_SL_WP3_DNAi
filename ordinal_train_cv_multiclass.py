@@ -127,7 +127,7 @@ def main():
         'prediction':  preds,
         'residual':    [l - p for l, p in zip(labels, preds)]
     })
-    out_csv = Path(args.k_cross_file).stem.replace('split','metrics') + '.csv'
+    out_csv = Path(args.k_cross_file).stem.replace('split','metrics') + 'classifier_ordinal.csv'
     df_met.to_csv(out_csv, index=False)
     print(f"Saved metrics to {out_csv}")
 

@@ -25,7 +25,7 @@ PROTECTION_FILE="label/labels_4_levels.csv"
 HABITAT_FILE="habitat/empty_label_habitat_460.csv"
 
 # === Checkpoint da testare ===
-CHECKPOINT="CV_Class/uw7oebu4/checkpoints/epoch=24-step=250.ckpt"
+CHECKPOINT="CV_Class/d65rwe4c/checkpoints/epoch=13-step=140.ckpt"
 NUM_CLASSES=4    # solo per compatibilità con lo script Python
 BATCH_SIZE=32
 

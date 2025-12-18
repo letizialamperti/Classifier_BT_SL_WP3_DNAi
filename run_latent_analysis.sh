@@ -28,7 +28,7 @@ HABITAT_COL="habitat/label_habitat_460.csv"
 
 
 # === Checkpoint da analizzare ===
-CHECKPOINT="CV_Class/vd7l6di8/checkpoints/epoch=25-step=260.ckpt"
+CHECKPOINT="CV_Class/m92ijui2/checkpoints/epoch=57-step=522.ckpt"
 
 # ==========================
 #      ANALYSIS PARAMETERS

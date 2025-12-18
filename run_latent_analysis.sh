@@ -21,19 +21,19 @@ conda activate zioboia
 #       INPUT FILES
 # ==========================
 EMBEDDINGS="BT_output/train/embedding_coords_460_all_data_.csv"
-PROTECTION="label/labels_5_levels.csv"
+PROTECTION="label/labels_4_levels.csv"
 HABITAT="habitat/empty_label_habitat_460.csv"
 
 HABITAT_COL="habitat/label_habitat_460.csv"
 
 
 # === Checkpoint da analizzare ===
-CHECKPOINT="CV_Class/1bhnytg5/checkpoints/epoch=39-step=440.ckpt"
+CHECKPOINT="CV_Class/w3vd4u06/checkpoints/epoch=64-step=650.ckpt"
 
 # ==========================
 #      ANALYSIS PARAMETERS
 # ==========================
-NUM_CLASSES=5
+NUM_CLASSES=4
 BATCH_SIZE=32
 MAX_POINTS=460   # limite massimo punti per t-SNE/PCoA
 WANDB_PROJECT="LatentSpaceCORAL"

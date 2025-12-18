@@ -23,7 +23,7 @@ echo "Starting cross-validation over 4 folds…"
 
 for fold in {1..4}; do
   fold_padded=$(printf "%02d" "$fold")
-  K_CROSS_FILE="k_cross/new_split_4_fold_${fold_padded}.csv"
+  K_CROSS_FILE="k_cross/new_no_coral_split_4_fold_${fold_padded}.csv"
 
   echo "=== Fold $fold_padded → using split file $K_CROSS_FILE ==="
 

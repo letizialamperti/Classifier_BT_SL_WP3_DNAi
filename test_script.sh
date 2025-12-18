@@ -21,12 +21,12 @@ conda activate zioboia
 #       INPUT FILES
 # ==========================
 EMBEDDINGS_FILE="BT_output/train/embedding_coords_460_all_data_.csv"
-PROTECTION_FILE="label/labels_5_levels.csv"
+PROTECTION_FILE="label/labels_4_levels.csv"
 HABITAT_FILE="habitat/empty_label_habitat_460.csv"
 
 # === Checkpoint da testare ===
-CHECKPOINT="CV_Class/oy5yidch/checkpoints/epoch=20-step=210.ckpt"
-NUM_CLASSES=5    # solo per compatibilità con lo script Python
+CHECKPOINT="CV_Class/m92ijui2/checkpoints/epoch=57-step=522.ckpt"
+NUM_CLASSES=4    # solo per compatibilità con lo script Python
 BATCH_SIZE=32
 
 # ==========================

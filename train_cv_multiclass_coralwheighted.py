@@ -55,6 +55,12 @@ def main():
                                 args.protection_file,
                                 args.habitat_file)
     code_to_idx = {code: i for i, code in enumerate(full_ds.codes)}
+    valid_codes = set(map(str, full_ds.codes))  # codici presenti DAVVERO nel dataset filtrato
+
+    # filtra gli split per evitare KeyError[PA Matrix with 408 samples)
+    train_codes = [c for c in train_codes_raw if c in valid_codes]
+    val_codes   = [c for c in val_codes_raw if c in valid_codes]
+    
     train_idx   = [code_to_idx[c] for c in train_codes]
     val_idx     = [code_to_idx[c] for c in val_codes]
 

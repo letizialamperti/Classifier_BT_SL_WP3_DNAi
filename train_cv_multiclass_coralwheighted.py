@@ -47,14 +47,15 @@ def main():
 
     # 1) split CSV
     split_df    = pd.read_csv(args.k_cross_file)
-    train_codes = split_df.loc[split_df['set']=='train','spygen_code'].astype(str).tolist()
-    val_codes   = split_df.loc[split_df['set']=='validation','spygen_code'].astype(str).tolist()
+    train_codes_raw = split_df.loc[split_df['set']=='train','spygen_code'].astype(str).tolist()
+    val_codes_raw   = split_df.loc[split_df['set']=='validation','spygen_code'].astype(str).tolist()
 
     # 2) dataset e subset
     full_ds     = MergedDataset(args.embeddings_file,
                                 args.protection_file,
                                 args.habitat_file)
     code_to_idx = {code: i for i, code in enumerate(full_ds.codes)}
+    
     valid_codes = set(map(str, full_ds.codes))  # codici presenti DAVVERO nel dataset filtrato
 
     # filtra gli split per evitare KeyError[PA Matrix with 408 samples)

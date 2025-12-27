@@ -18,11 +18,11 @@ EMBEDDINGS_FILE="BT_output/train/embedding_coords_460_all_data_.csv"
 PROTECTION_FILE="label/general_labels_numeric_binary.csv"
 HABITAT_FILE="habitat/empty_label_habitat_460.csv"
 
-echo "Starting habitat-aware binary classification CV over 5 folds…"
+echo "Starting cross-validation over 4 folds…"
 
-for fold in {1..5}; do
+for fold in {1..4}; do
   fold_padded=$(printf "%02d" "$fold")
-  K_CROSS_FILE="k_cross/split_5_fold_${fold_padded}.csv"
+  K_CROSS_FILE="k_cross/new_split_4_fold_${fold_padded}.csv"
   echo "=== Fold $fold_padded: split $K_CROSS_FILE ==="
 
   python training_binary_classifier.py \
@@ -38,8 +38,8 @@ for fold in {1..5}; do
     --accelerator gpu \
     --seed 42
 
-  METRICS_IN="metrics_5_fold_${fold_padded}.csv"
-  METRICS_OUT="metrics_5_binary_fold_${fold_padded}_habitat.csv"
+  METRICS_IN="metrics_4_fold_${fold_padded}.csv"
+  METRICS_OUT="metrics_4_binary_fold_${fold_padded}_habitat.csv"
   if [[ -f "${METRICS_IN}" ]]; then
     mv "${METRICS_IN}" "${METRICS_OUT}"
     echo "→ Renamed ${METRICS_IN} to ${METRICS_OUT}"
@@ -50,4 +50,4 @@ for fold in {1..5}; do
   echo "=== Fold $fold_padded completed ==="
 done
 
-echo "All 5 habitat binary folds done!"
+echo "All 4 binary folds done!"

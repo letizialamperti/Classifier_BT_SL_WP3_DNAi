@@ -5,7 +5,7 @@ import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
-from merged_dataset import MergedDataset
+from merged_dataset_PAMatrix import MergedDataset
 from ORDNA.models.binary_classifier import BinaryClassifier
 from ORDNA.utils.argparser import get_args, write_config_file
 from torch.utils.data import DataLoader, Subset
@@ -64,8 +64,14 @@ def main():
 
         # Carica split
         kdf = pd.read_csv(split_file, dtype=str)
-        train_codes = kdf.loc[kdf['set'] == 'train', 'spygen_code'].tolist()
-        val_codes   = kdf.loc[kdf['set'] != 'train', 'spygen_code'].tolist()
+        train_codes_raw = kdf.loc[kdf['set'] == 'train', 'spygen_code'].tolist()
+        val_codes_raw   = kdf.loc[kdf['set'] != 'train', 'spygen_code'].tolist()
+
+        valid_codes = set(map(str, dataset_full.codes))  # codici presenti DAVVERO nel dataset filtrato
+
+        # filtra gli split per evitare KeyError[PA Matrix with 408 samples)
+        train_codes = [c for c in train_codes_raw if c in valid_codes]
+        val_codes   = [c for c in val_codes_raw if c in valid_codes]
 
         # Indici
         train_indices = [i for i, code in enumerate(dataset_full.codes) if code in train_codes]

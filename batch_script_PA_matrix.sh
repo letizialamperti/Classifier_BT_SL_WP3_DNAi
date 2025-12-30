@@ -29,7 +29,7 @@ for fold in {1..4}; do
 
   export CUDA_LAUNCH_BLOCKING=1
 
-  python train_cv_multiclass_coralwheighted.py \
+  python train_coralweighted_PAmatrix.py \
     --arg_log True \
     --embeddings_file "$EMBEDDINGS_FILE" \
     --protection_file "$PROTECTION_FILE" \

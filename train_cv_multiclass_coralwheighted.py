@@ -7,7 +7,7 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
 from merged_dataset import MergedDataset
-from ORDNA.models.classifier_coralweighted_monotone import Classifier
+from ORDNA.models.classifier_coralwheighted import Classifier
 
 from pathlib import Path
 from ORDNA.utils.argparser import get_args, write_config_file

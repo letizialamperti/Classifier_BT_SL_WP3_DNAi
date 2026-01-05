@@ -5,7 +5,7 @@ import torch
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
 from pytorch_lightning.loggers import WandbLogger
-from merged_dataset_PAMatrix import MergedDataset
+from merged_dataset import MergedDataset
 from ORDNA.models.binary_classifier import BinaryClassifier
 from ORDNA.utils.argparser import get_args, write_config_file
 from torch.utils.data import DataLoader, Subset

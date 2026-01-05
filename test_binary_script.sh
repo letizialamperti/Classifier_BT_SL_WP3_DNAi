@@ -26,7 +26,6 @@ HABITAT_FILE="habitat/empty_label_habitat_460.csv"
 
 # === Checkpoint da testare ===
 CHECKPOINT="checkpoints_binary_classifier/binary-new_no_coral_split_4_fold_04-val_acc=0.99.ckpt"
-NUM_CLASSES=2    # solo per compatibilità con lo script Python
 BATCH_SIZE=32
 
 # ==========================
@@ -44,7 +43,6 @@ python test_binary_classifer.py \
     --protection_file "$PROTECTION_FILE" \
     --habitat_file "$HABITAT_FILE" \
     --checkpoint "$CHECKPOINT" \
-    --num_classes "$NUM_CLASSES" \
     --batch_size "$BATCH_SIZE" \
     --device cuda \
     --spygen_codes "${SPYGEN_CODES[@]}" \

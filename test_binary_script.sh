@@ -25,7 +25,7 @@ PROTECTION_FILE="label/general_labels_numeric_binary.csv"
 HABITAT_FILE="habitat/empty_label_habitat_460.csv"
 
 # === Checkpoint da testare ===
-CHECKPOINT="checkpoints_binary_classifier/binary-new_no_coral_split_4_fold_02-val_acc=0.98.ckpt"
+CHECKPOINT="checkpoints_binary_classifier/binary-new_no_coral_split_4_fold_01-val_acc=0.95.ckpt"
 BATCH_SIZE=32
 
 # ==========================

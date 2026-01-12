@@ -25,10 +25,10 @@ PROTECTION="label/labels_4_levels.csv"
 HABITAT="habitat/empty_label_habitat_460.csv"
 
 HABITAT_COL="habitat/label_habitat_460.csv"
-
+K_CROSS_FILE="k_cross/new_split_4_fold_01.csv"
 
 # === Checkpoint da analizzare ===
-CHECKPOINT="CV_Class/m92ijui2/checkpoints/epoch=57-step=522.ckpt"
+CHECKPOINT="CV_Class/33eljlme/checkpoints/epoch=47-step=528.ckpt"
 
 # ==========================
 #      ANALYSIS PARAMETERS
@@ -47,6 +47,7 @@ python analyze_latent_space.py \
     --protection_file "$PROTECTION" \
     --habitat_file "$HABITAT" \
     --habitat_labels_file "$HABITAT_COL" \
+    --k_cross_file "$K_CROSS_FILE" \
     --num_classes $NUM_CLASSES \
     --batch_size $BATCH_SIZE \
     --max_points $MAX_POINTS \

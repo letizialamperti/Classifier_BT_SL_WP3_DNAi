@@ -194,6 +194,13 @@ def main():
     parser.add_argument("--embeddings_file", type=str, required=True)
     parser.add_argument("--protection_file", type=str, required=True)
     parser.add_argument("--habitat_file", type=str, required=True)
+    parser.add_argument("--use_raw_embeddings", action="store_true",
+                    help="Se attivo, usa direttamente embeddings_file come matrice (no modello).")
+    parser.add_argument("--emb_code_col", type=str, default="spygen_code",
+                    help="Nome colonna codice nel CSV embeddings (default: spygen_code).")
+    parser.add_argument("--emb_drop_cols", type=str, default="spygen_code",
+                    help="Colonne da escludere dalla matrice embedding (comma-separated).")
+
 
     # CSV con etichette categoriali per visualizzare l'habitat
     parser.add_argument("--habitat_labels_file", type=str, default=None)
@@ -243,6 +250,58 @@ def main():
     val_codes = [c for c in val_codes_raw if c in valid_codes]
     val_idx = [code_to_idx[c] for c in val_codes]
     val_ds = Subset(full_ds, val_idx)
+
+    if args.use_raw_embeddings:
+    emb_df = pd.read_csv(args.embeddings_file)
+
+    # 1) recupera i codici per joinare/filtrare validation
+    if args.emb_code_col not in emb_df.columns:
+        raise ValueError(
+            f"Per --use_raw_embeddings, embeddings_file deve contenere la colonna '{args.emb_code_col}'. "
+            f"Colonne trovate: {list(emb_df.columns)}"
+        )
+
+        emb_df = emb_df.copy()
+        emb_df[args.emb_code_col] = emb_df[args.emb_code_col].astype(str)
+    
+        # 2) filtra SOLO validation usando i codici del k_cross (val_codes)
+        emb_val = emb_df[emb_df[args.emb_code_col].isin(set(val_codes))].copy()
+    
+        # preserva l'ordine di val_codes (stesso ordine di val_ds)
+        emb_val["_order"] = emb_val[args.emb_code_col].map({c: i for i, c in enumerate(val_codes)})
+        emb_val = emb_val.sort_values("_order").drop(columns=["_order"])
+    
+        # 3) costruisci matrice X
+        drop_cols = [c.strip() for c in args.emb_drop_cols.split(",") if c.strip()]
+        feature_cols = [c for c in emb_val.columns if c not in drop_cols]
+        X = emb_val[feature_cols].to_numpy(dtype=np.float32)
+    
+        latent = X
+        n_samples = latent.shape[0]
+        print(f"Numero di campioni (validation) da embeddings CSV: {n_samples}")
+    
+        # 4) prot_labels per colorare (serve join con PROTECTION file se vuoi)
+        # Se non vuoi colorare, puoi mettere prot_labels = np.zeros(n_samples)
+        prot_df = pd.read_csv(args.protection_file)
+        if "spygen_code" not in prot_df.columns:
+            raise ValueError("protection_file deve avere colonna 'spygen_code' per joinare in modalità raw embeddings.")
+        if "protection" not in prot_df.columns:
+            # cambia qui se la tua colonna si chiama diversamente
+            raise ValueError("protection_file deve avere colonna 'protection' (o adattare il codice).")
+    
+        prot_df = prot_df.copy()
+        prot_df["spygen_code"] = prot_df["spygen_code"].astype(str)
+        code_to_prot = dict(zip(prot_df["spygen_code"].values, prot_df["protection"].values))
+    
+        missing_p = [c for c in val_codes if c not in code_to_prot]
+        if missing_p:
+            raise ValueError(f"Mancano protection label per {len(missing_p)} codici. Esempio: {missing_p[:10]}")
+    
+        prot_labels = np.array([code_to_prot[c] for c in val_codes])
+    else:
+        # ... percorso attuale: modello + val_ds
+        latent, prot_labels = extract_latent_representations(...)
+
 
     # 4) Carica modello dal checkpoint
     model = Classifier.load_from_checkpoint(

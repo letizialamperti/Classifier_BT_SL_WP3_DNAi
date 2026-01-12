@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import torch
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Subset
 
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
@@ -198,6 +198,9 @@ def main():
     # CSV con etichette categoriali per visualizzare l'habitat
     parser.add_argument("--habitat_labels_file", type=str, default=None)
 
+    # split file (con colonne: set, spygen_code)
+    parser.add_argument("--k_cross_file", type=str, required=True)
+
     parser.add_argument("--checkpoint", type=str, required=True)
     parser.add_argument("--num_classes", type=int, required=True)
     parser.add_argument("--batch_size", type=int, default=128)
@@ -206,7 +209,7 @@ def main():
     # wandb
     parser.add_argument("--wandb_project", type=str, default="LatentSpaceCORAL")
     parser.add_argument("--wandb_entity", type=str, default=None)
-    parser.add_argument("--wandb_run_name", type=str, default="coral_latent_analysis")
+    parser.add_argument("--wandb_run_name", type=str, default="coral_latent_analysis_val_only")
 
     args = parser.parse_args()
     # -------------------------------------
@@ -223,46 +226,73 @@ def main():
         wandb_kwargs["entity"] = args.wandb_entity
     wandb.init(**wandb_kwargs)
 
-    # 2) Carica dataset
+    # 2) Carica dataset completo
     full_ds = MergedDataset(
         args.embeddings_file,
         args.protection_file,
         args.habitat_file
     )
 
-    # 3) Carica modello dal checkpoint (usa hparams salvati)
+    # 3) Split CSV -> val_idx -> val_ds
+    split_df = pd.read_csv(args.k_cross_file)
+    val_codes_raw = split_df.loc[split_df['set'] == 'validation', 'spygen_code'].astype(str).tolist()
+
+    code_to_idx = {str(code): i for i, code in enumerate(full_ds.codes)}
+    valid_codes = set(map(str, full_ds.codes))
+
+    val_codes = [c for c in val_codes_raw if c in valid_codes]
+    val_idx = [code_to_idx[c] for c in val_codes]
+    val_ds = Subset(full_ds, val_idx)
+
+    # 4) Carica modello dal checkpoint
     model = Classifier.load_from_checkpoint(
         checkpoint_path=args.checkpoint,
         strict=True
     )
 
-    # 4) Estrai spazio latente + etichette protezione
+    # 5) Estrai spazio latente + etichette protezione (SOLO validation)
     latent, prot_labels = extract_latent_representations(
         model,
-        full_ds,
+        val_ds,
         batch_size=args.batch_size,
         device=device
     )
 
     n_samples = latent.shape[0]
-    print(f"Numero di campioni nel dataset: {n_samples}")
+    print(f"Numero di campioni in validation: {n_samples}")
 
-    # 5) Etichette habitat categoriche (fattorizzate)
+    # 6) Etichette habitat categoriche (fattorizzate) - join per spygen_code
     if args.habitat_labels_file is not None:
         hab_df = pd.read_csv(args.habitat_labels_file)
-        if len(hab_df) != n_samples:
-            raise ValueError(
-                f"habitat_labels_file ha {len(hab_df)} righe ma il dataset ha {n_samples} campioni."
-            )
 
-        # ci aspettiamo una colonna chiamata 'habitat'
+        if "spygen_code" not in hab_df.columns:
+            raise ValueError(
+                f"habitat_labels_file deve contenere una colonna 'spygen_code'. "
+                f"Colonne disponibili: {list(hab_df.columns)}"
+            )
         if "habitat" not in hab_df.columns:
             raise ValueError(
                 f"habitat_labels_file deve contenere una colonna 'habitat'. "
                 f"Colonne disponibili: {list(hab_df.columns)}"
             )
 
-        hab_str = hab_df["habitat"].astype(str).values
+        # mapping code -> habitat
+        hab_df = hab_df.copy()
+        hab_df["spygen_code"] = hab_df["spygen_code"].astype(str)
+
+        if hab_df["spygen_code"].duplicated().any():
+            hab_df = hab_df.drop_duplicates(subset=["spygen_code"], keep="first")
+
+        code_to_hab = dict(zip(hab_df["spygen_code"].values, hab_df["habitat"].astype(str).values))
+
+        missing = [c for c in val_codes if c not in code_to_hab]
+        if len(missing) > 0:
+            raise ValueError(
+                f"{len(missing)} codici di validation non trovati nel habitat_labels_file (spygen_code). "
+                f"Esempio mancanti: {missing[:10]}"
+            )
+
+        hab_str = np.array([code_to_hab[c] for c in val_codes], dtype=str)
         hab_codes, hab_uniques = pd.factorize(hab_str)
 
         # categorie nominali (per legenda)
@@ -283,6 +313,7 @@ def main():
         else:
             habitats_np = habitats
 
+        habitats_np = habitats_np[val_idx]
         hab_codes = habitats_np.argmax(axis=1)
         hab_uniques = np.unique(hab_codes)
 
@@ -294,13 +325,13 @@ def main():
             mapping_table.add_data(int(code))
         wandb.log({"habitat_code_mapping": mapping_table})
 
-    # 6) Subsample per metodi costosi (t-SNE, PCoA)
+    # 7) Subsample per metodi costosi (t-SNE, PCoA)
     latent_sub, prot_sub, hab_sub = maybe_subsample(
         latent, prot_labels, hab_codes, args.max_points
     )
-    print(f"Useremo {latent_sub.shape[0]} punti per t-SNE e PCoA.")
+    print(f"Useremo {latent_sub.shape[0]} punti (validation) per t-SNE e PCoA.")
 
-    # 7) PCA 2D
+    # 8) PCA 2D
     latent_pca_2d, pca_var = pca_2d(latent_sub)
     wandb.log({
         "pca_var_explained_PC1": float(pca_var[0]),
@@ -309,42 +340,42 @@ def main():
 
     fig_pca_prot = plot_scatter(
         latent_pca_2d, prot_sub,
-        title="PCA (2D) - colored by protection"
+        title="PCA (2D) - VALIDATION ONLY - colored by protection"
     )
     fig_pca_hab = plot_scatter(
         latent_pca_2d, hab_sub,
-        title="PCA (2D) - colored by habitat",
+        title="PCA (2D) - VALIDATION ONLY - colored by habitat",
         categories=hab_categories
     )
     wandb.log({
-        "PCA_protection": wandb.Image(fig_pca_prot),
-        "PCA_habitat": wandb.Image(fig_pca_hab),
+        "PCA_protection_val_only": wandb.Image(fig_pca_prot),
+        "PCA_habitat_val_only": wandb.Image(fig_pca_hab),
     })
     plt.close(fig_pca_prot)
     plt.close(fig_pca_hab)
 
-    # 8) t-SNE 2D
+    # 9) t-SNE 2D
     latent_tsne_2d = tsne_2d(
         latent_sub,
         perplexity=min(30, max(5, latent_sub.shape[0] // 10))
     )
     fig_tsne_prot = plot_scatter(
         latent_tsne_2d, prot_sub,
-        title="t-SNE (2D) - colored by protection"
+        title="t-SNE (2D) - VALIDATION ONLY - colored by protection"
     )
     fig_tsne_hab = plot_scatter(
         latent_tsne_2d, hab_sub,
-        title="t-SNE (2D) - colored by habitat",
+        title="t-SNE (2D) - VALIDATION ONLY - colored by habitat",
         categories=hab_categories
     )
     wandb.log({
-        "tSNE_protection": wandb.Image(fig_tsne_prot),
-        "tSNE_habitat": wandb.Image(fig_tsne_hab),
+        "tSNE_protection_val_only": wandb.Image(fig_tsne_prot),
+        "tSNE_habitat_val_only": wandb.Image(fig_tsne_hab),
     })
     plt.close(fig_tsne_prot)
     plt.close(fig_tsne_hab)
 
-    # 9) PCoA 2D
+    # 10) PCoA 2D
     latent_pcoa_2d, pcoa_var = pcoa_2d(latent_sub)
     wandb.log({
         "pcoa_var_explained_PC1": float(pcoa_var[0]),
@@ -353,16 +384,16 @@ def main():
 
     fig_pcoa_prot = plot_scatter(
         latent_pcoa_2d, prot_sub,
-        title="PCoA (2D) - colored by protection"
+        title="PCoA (2D) - VALIDATION ONLY - colored by protection"
     )
     fig_pcoa_hab = plot_scatter(
         latent_pcoa_2d, hab_sub,
-        title="PCoA (2D) - colored by habitat",
+        title="PCoA (2D) - VALIDATION ONLY - colored by habitat",
         categories=hab_categories
     )
     wandb.log({
-        "PCoA_protection": wandb.Image(fig_pcoa_prot),
-        "PCoA_habitat": wandb.Image(fig_pcoa_hab),
+        "PCoA_protection_val_only": wandb.Image(fig_pcoa_prot),
+        "PCoA_habitat_val_only": wandb.Image(fig_pcoa_hab),
     })
     plt.close(fig_pcoa_prot)
     plt.close(fig_pcoa_hab)

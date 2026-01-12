@@ -25,10 +25,10 @@ PROTECTION="label/labels_4_levels.csv"
 HABITAT="habitat/empty_label_habitat_460.csv"
 
 HABITAT_COL="habitat/label_habitat_460.csv"
-K_CROSS_FILE="k_cross/new_split_4_fold_03.csv"
+K_CROSS_FILE="k_cross/new_split_4_fold_04.csv"
 
 # === Checkpoint da analizzare ===
-CHECKPOINT="CV_Class/4ipmwyet/checkpoints/epoch=53-step=594.ckpt"
+CHECKPOINT="CV_Class/ix2dj0bn/checkpoints/epoch=81-step=820.ckpt"
 
 # ==========================
 #      ANALYSIS PARAMETERS

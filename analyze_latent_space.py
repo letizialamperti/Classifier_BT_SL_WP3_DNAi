@@ -252,7 +252,7 @@ def main():
     val_ds = Subset(full_ds, val_idx)
 
     if args.use_raw_embeddings:
-    emb_df = pd.read_csv(args.embeddings_file)
+     emb_df = pd.read_csv(args.embeddings_file)
 
     # 1) recupera i codici per joinare/filtrare validation
     if args.emb_code_col not in emb_df.columns:
